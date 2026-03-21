@@ -7,7 +7,7 @@ import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { readdirSync, readFileSync } from 'fs';
 import type { Agent, HeartbeatDaemon, SpecterConfig } from '@specter/core';
-import { readMemory, writeMemory, readActivity, eventBus, getConfig } from '@specter/core';
+import { readMemory, writeMemory, readActivity, eventBus, getConfig, getUsageSummary } from '@specter/core';
 import { getMemoryStore } from '@specter/memory';
 import { setupWebSocket } from './ws.js';
 
@@ -160,6 +160,11 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
       return reply.code(404).send({ error: 'File not found' });
     }
     return { filename: req.params.filename, content: readFileSync(filePath, 'utf-8') };
+  });
+
+  // Persistent usage stats
+  app.get('/api/usage', async () => {
+    return getUsageSummary();
   });
 
   // Persistent memory API
