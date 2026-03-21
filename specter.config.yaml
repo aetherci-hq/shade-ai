@@ -1,3 +1,5 @@
+name: Specter
+
 llm:
   provider: claude
   model: claude-sonnet-4-20250514

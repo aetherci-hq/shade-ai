@@ -13,6 +13,7 @@ interface Props {
   messages: ChatMessage[];
   onSend: (message: string) => void;
   isRunning: boolean;
+  agentName: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -316,7 +317,7 @@ function AssistantMessage({ content, ts, isStreaming }: { content: string; ts: n
 
 // ─── Main Component ─────────────────────────────────────────────────
 
-export function ChatPanel({ messages, onSend, isRunning }: Props) {
+export function ChatPanel({ messages, onSend, isRunning, agentName }: Props) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -442,7 +443,7 @@ export function ChatPanel({ messages, onSend, isRunning }: Props) {
       >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="text-c-muted text-[11px] mb-1">specter ready</div>
+            <div className="text-c-muted text-[11px] mb-1">{agentName.toLowerCase()} ready</div>
             <div className="text-c-dim text-[10px]">Type a command below to begin.</div>
           </div>
         )}
@@ -492,7 +493,7 @@ export function ChatPanel({ messages, onSend, isRunning }: Props) {
       {/* Input area */}
       <div className="px-3 py-2 border-t border-c-border shrink-0">
         <div className="flex items-end gap-2">
-          <span className="text-c-accent font-medium text-[11px] shrink-0 pb-0.5">specter {'>'}</span>
+          <span className="text-c-accent font-medium text-[11px] shrink-0 pb-0.5">{agentName.toLowerCase()} {'>'}</span>
           <textarea
             ref={textareaRef}
             value={input}

@@ -14,6 +14,8 @@ interface ShellProps {
   onHeartbeatTrigger: () => void;
   onHeartbeatToggle: (enabled: boolean) => void;
   startTime: number;
+  agentName: string;
+  modelName: string;
 }
 
 const NAV_ITEMS: { id: View; label: string; icon: typeof Activity }[] = [
@@ -48,7 +50,7 @@ function formatUptime(ms: number): string {
   return `${s}s`;
 }
 
-export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime }: ShellProps) {
+export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime, agentName, modelName }: ShellProps) {
   const [clock, setClock] = useState(new Date());
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
           <div className="px-4 py-4 border-b border-c-border">
             <div className="flex items-center gap-2">
               <Zap size={14} className="text-c-accent" />
-              <span className="text-[11px] font-medium text-c-text glow-text-strong tracking-[0.2em]">SPECTER</span>
+              <span className="text-[11px] font-medium text-c-text glow-text-strong tracking-[0.2em]">{agentName.toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-1.5 mt-2">
               <div className={`w-1.5 h-1.5 ${connected ? 'bg-c-green animate-pulse-live' : 'bg-c-red'}`} />
@@ -139,7 +141,7 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
           </span>
         </div>
         <span className="text-c-border">|</span>
-        <span className="text-c-muted">sonnet</span>
+        <span className="text-c-muted">{modelName.replace(/^claude-|-\d+$/g, '')}</span>
         <span className="text-c-border">|</span>
         <span className="text-c-muted">up {formatUptime(uptime)}</span>
         <span className="text-c-border">|</span>
