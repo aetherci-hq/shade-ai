@@ -1,0 +1,62 @@
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { getConfig } from './config.js';
+import { eventBus } from './events.js';
+
+type MemoryFile = 'MEMORY' | 'HEARTBEAT' | 'SOUL';
+
+function filePath(file: MemoryFile): string {
+  const config = getConfig();
+  return resolve(config.memory.dir, `${file}.md`);
+}
+
+export function readMemory(file: MemoryFile): string {
+  const path = filePath(file);
+  if (!existsSync(path)) return '';
+  return readFileSync(path, 'utf-8');
+}
+
+export function writeMemory(file: MemoryFile, content: string): void {
+  const path = filePath(file);
+  writeFileSync(path, content, 'utf-8');
+  eventBus.emit('memory:updated', { file: `${file}.md` });
+}
+
+export function appendMemory(file: MemoryFile, content: string): void {
+  const path = filePath(file);
+  appendFileSync(path, '\n' + content, 'utf-8');
+  eventBus.emit('memory:updated', { file: `${file}.md` });
+}
+
+// Activity log (JSONL)
+export function appendActivity(entry: Record<string, unknown>): void {
+  const config = getConfig();
+  const logPath = resolve(config.memory.stateDir, 'activity.jsonl');
+  mkdirSync(dirname(logPath), { recursive: true });
+  const line = JSON.stringify({ ts: Date.now(), ...entry });
+  appendFileSync(logPath, line + '\n', 'utf-8');
+}
+
+export function readActivity(limit = 100): Record<string, unknown>[] {
+  const config = getConfig();
+  const logPath = resolve(config.memory.stateDir, 'activity.jsonl');
+  if (!existsSync(logPath)) return [];
+  const lines = readFileSync(logPath, 'utf-8').trim().split('\n').filter(Boolean);
+  return lines.slice(-limit).map(line => JSON.parse(line)).reverse();
+}
+
+// Transcript management
+export function appendTranscript(conversationId: string, entry: Record<string, unknown>): void {
+  const config = getConfig();
+  const dir = resolve(config.memory.stateDir, 'transcripts');
+  mkdirSync(dir, { recursive: true });
+  const path = resolve(dir, `${conversationId}.jsonl`);
+  appendFileSync(path, JSON.stringify(entry) + '\n', 'utf-8');
+}
+
+export function readTranscript(conversationId: string): Record<string, unknown>[] {
+  const config = getConfig();
+  const path = resolve(config.memory.stateDir, 'transcripts', `${conversationId}.jsonl`);
+  if (!existsSync(path)) return [];
+  return readFileSync(path, 'utf-8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+}
