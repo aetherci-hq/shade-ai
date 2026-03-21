@@ -16,10 +16,17 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
   await app.register(fastifyCors, { origin: true });
   await app.register(fastifyWebsocket);
 
-  // Serve dashboard static files if built
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const dashboardDist = resolve(__dirname, '../../dashboard/dist');
-  if (existsSync(dashboardDist)) {
+  // Serve dashboard static files — resolve via npm package location
+  let dashboardDist = '';
+  try {
+    const dashboardMain = fileURLToPath(import.meta.resolve('@specter/dashboard'));
+    dashboardDist = dirname(dashboardMain);
+  } catch {
+    // Fallback: monorepo sibling path
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    dashboardDist = resolve(__dirname, '../../dashboard/dist');
+  }
+  if (dashboardDist && existsSync(dashboardDist)) {
     await app.register(fastifyStatic, {
       root: dashboardDist,
       prefix: '/',

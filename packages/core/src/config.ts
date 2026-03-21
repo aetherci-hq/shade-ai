@@ -107,7 +107,13 @@ export function loadConfig(baseDir: string): SpecterConfig {
   const interpolated = deepInterpolate(userConfig) as Record<string, unknown>;
   const merged = deepMerge(DEFAULTS as unknown as Record<string, unknown>, interpolated);
 
-  _config = merged as unknown as SpecterConfig;
+  // Resolve relative paths against baseDir (where the config file lives)
+  const cfg = merged as unknown as SpecterConfig;
+  cfg.memory.dir = resolve(baseDir, cfg.memory.dir);
+  cfg.memory.stateDir = resolve(baseDir, cfg.memory.stateDir);
+  cfg.tools.userDir = resolve(baseDir, cfg.tools.userDir);
+
+  _config = cfg;
   return _config;
 }
 

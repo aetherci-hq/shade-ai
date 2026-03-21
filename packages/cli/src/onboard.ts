@@ -292,9 +292,9 @@ guardrails:
   console.log(green('  ╚══════════════════════════════════════════╝'));
   console.log('');
   console.log(dim('  Start your agent:'));
-  console.log(cyan('    npx tsx packages/server/src/index.ts'));
+  console.log(cyan('    npx specter start'));
   console.log('');
-  console.log(dim('  Then open the dashboard:'));
+  console.log(dim('  Dashboard:'));
   console.log(cyan('    http://localhost:3700'));
   console.log('');
 }

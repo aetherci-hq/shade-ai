@@ -9,9 +9,11 @@
     "build": "tsc",
     "dev": "tsx src/index.ts"
   },
+  "files": ["dist"],
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@specter/core": "*",
+    "@specter/server": "*",
     "chalk": "^5.4.0",
     "commander": "^13.0.0"
   },
