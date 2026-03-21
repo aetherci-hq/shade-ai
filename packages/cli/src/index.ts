@@ -36,7 +36,7 @@ program
     // Import and run the server directly
     process.env.SPECTER_PORT = opts.port;
     if (!opts.heartbeat) process.env.SPECTER_NO_HEARTBEAT = '1';
-    await import('@specter/server/src/index.js');
+    await import('@specter/server');
   });
 
 // specter chat

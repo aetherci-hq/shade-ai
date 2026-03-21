@@ -8,11 +8,13 @@
     "dev": "tsx --watch src/index.ts",
     "start": "tsx src/index.ts"
   },
+  "files": ["dist"],
   "dependencies": {
     "@fastify/cors": "^10.0.0",
     "@fastify/static": "^8.0.0",
     "@fastify/websocket": "^11.0.0",
     "@specter/core": "*",
+    "@specter/dashboard": "*",
     "fastify": "^5.2.0"
   },
   "devDependencies": {
