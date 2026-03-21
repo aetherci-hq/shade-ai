@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Activity, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, HeartPulse, Fingerprint } from 'lucide-react';
 import type { AgentState } from '../hooks/useAgent';
@@ -52,9 +52,24 @@ function formatUptime(ms: number): string {
 
 export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime, agentName, modelName }: ShellProps) {
   const [clock, setClock] = useState(new Date());
+  const [sessionCost, setSessionCost] = useState(0);
+  const costFetchRef = useRef(0);
 
   useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch actual cost from persistent tracker periodically
+  useEffect(() => {
+    const load = () => {
+      fetch('/api/usage')
+        .then(r => r.json())
+        .then(data => { if (data?.session) setSessionCost(data.session.costUsd); })
+        .catch(() => {});
+    };
+    load();
+    const timer = setInterval(load, 10000);
     return () => clearInterval(timer);
   }, []);
 
@@ -151,6 +166,8 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
         </span>
         <span className="text-c-border">|</span>
         <span className="text-c-muted">{agent.toolCalls} calls</span>
+        <span className="text-c-border">|</span>
+        <span className="text-c-amber">{sessionCost < 0.01 && sessionCost > 0 ? '<$0.01' : `$${sessionCost.toFixed(2)}`}</span>
         <div className="ml-auto text-c-muted">
           {clock.toLocaleTimeString('en-US', { hour12: false })}
         </div>

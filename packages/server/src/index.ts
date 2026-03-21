@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { loadConfig, Agent, HeartbeatDaemon, setMemoryStore, eventBus } from '@specter/core';
+import { loadConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, eventBus } from '@specter/core';
 import { initMemory } from '@specter/memory';
 import { createServer } from './http.js';
 
@@ -15,21 +15,25 @@ async function main() {
     console.log(`[specter] Budget cap: $${config.agent.maxBudgetUsd}`);
   }
 
-  // 2. Initialize persistent memory
+  // 2. Initialize persistent usage tracker
+  initUsageTracker();
+  console.log(`[specter] Usage tracker initialized (~/.specter/usage.json)`);
+
+  // 3. Initialize persistent memory
   const memoryStore = await initMemory();
   setMemoryStore(memoryStore);
   console.log(`[specter] Memory initialized (auto-capture: ${config.memory.autoCapture})`);
 
-  // 3. Create agent (now wraps Claude Agent SDK)
+  // 4. Create agent (now wraps Claude Agent SDK)
   const agent = new Agent();
 
-  // 4. Create heartbeat daemon
+  // 5. Create heartbeat daemon
   const heartbeat = new HeartbeatDaemon(agent);
 
-  // 5. Start HTTP + WebSocket server
+  // 6. Start HTTP + WebSocket server
   const server = await createServer(agent, heartbeat, config);
 
-  // 5. Start heartbeat
+  // 7. Start heartbeat
   if (config.heartbeat.enabled) {
     heartbeat.start();
     console.log(`[specter] Heartbeat enabled (every ${config.heartbeat.intervalMinutes}m)`);
@@ -57,6 +61,7 @@ async function main() {
 
   const shutdown = () => {
     console.log('\n[specter] Shutting down...');
+    flushUsage();
     heartbeat.stop();
     agent.abort();
     memoryStore.close();
