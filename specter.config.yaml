@@ -1,0 +1,63 @@
+llm:
+  provider: claude
+  model: claude-sonnet-4-20250514
+  maxTokens: 4096
+
+agent:
+  maxTurns: 75
+  # maxBudgetUsd: 1.00  # Uncomment to set a per-query cost cap
+  permissionMode: bypassPermissions
+  subagents:
+    researcher:
+      description: Research agent for web searches, information gathering, and analysis.
+      prompt: You are a research specialist. Search the web, gather information, and report findings concisely.
+      tools: [WebSearch, WebFetch, Read, Grep, Glob]
+      model: haiku
+    coder:
+      description: Coding agent for writing, editing, and debugging code.
+      prompt: You are a coding specialist. Write clean, correct code. Read existing code before modifying it.
+      tools: [Read, Write, Edit, Bash, Glob, Grep]
+      model: sonnet
+
+heartbeat:
+  enabled: true
+  intervalMinutes: 15
+
+server:
+  port: 3700
+  host: 127.0.0.1
+
+memory:
+  dir: .
+  stateDir: ./state
+
+tools:
+  allowed:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+    - WebFetch
+    - WebSearch
+    - Agent
+  disallowed: []
+  userDir: ./tools
+
+guardrails:
+  blockedCommands:
+    - "rm -rf /"
+    - "format"
+    - "shutdown"
+    - "reboot"
+    - "del /f /s /q"
+  blockedPaths:
+    - /etc
+    - /System
+    - C:\Windows
+    - C:\Program Files
+  maxShellTimeout: 30000
+  allowedHosts:
+    - "*"
+  maxFileSize: 1048576

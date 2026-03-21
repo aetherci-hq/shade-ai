@@ -1,0 +1,24 @@
+import type { ReactNode } from 'react';
+
+interface PanelProps {
+  title: string;
+  status?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}
+
+export function Panel({ title, status, children, className = '' }: PanelProps) {
+  return (
+    <div className={`bg-c-panel flex flex-col min-h-0 overflow-hidden ${className}`}>
+      <div className="flex justify-between items-center px-3 py-1.5 border-b border-c-border shrink-0">
+        <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-c-dim glow-text">
+          {title}
+        </span>
+        {status && <div className="flex items-center gap-2 text-[10px]">{status}</div>}
+      </div>
+      <div className="flex-1 overflow-y-auto px-3 py-2.5 text-xs">
+        {children}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --color-c-bg: #06080a;
+  --color-c-panel: #0d1117;
+  --color-c-surface: #161b22;
+  --color-c-hover: #1c2128;
+  --color-c-border: #21262d;
+  --color-c-text: #c9d1d9;
+  --color-c-dim: #8b949e;
+  --color-c-muted: #484f58;
+  --color-c-green: #39ff14;
+  --color-c-cyan: #58a6ff;
+  --color-c-amber: #d29922;
+  --color-c-red: #f85149;
+  --color-c-purple: #bc8cff;
+
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --animate-blink: blink 1s step-end infinite;
+  --animate-pulse-live: pulse-live 2s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.3s ease-out forwards;
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes pulse-live {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(57, 255, 20, 0.4); }
+    50% { box-shadow: 0 0 0 4px rgba(57, 255, 20, 0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--color-c-text);
+  background: var(--color-c-bg);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+}
+
+::selection {
+  background: rgba(57, 255, 20, 0.2);
+  color: var(--color-c-green);
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-c-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-c-muted); }
+* { scrollbar-width: thin; scrollbar-color: var(--color-c-border) transparent; }
+
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 0, 0, 0.025) 1px,
+    rgba(0, 0, 0, 0.025) 2px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.glow-text {
+  text-shadow: 0 0 12px rgba(57, 255, 20, 0.3);
+}
+
+.glow-text-strong {
+  text-shadow: 0 0 10px rgba(57, 255, 20, 0.5), 0 0 20px rgba(57, 255, 20, 0.2);
+}
+
+/* Heartbeat ring glow animation */
+@keyframes ring-breathe {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(57, 255, 20, 0.2)); }
+  50% { filter: drop-shadow(0 0 12px rgba(57, 255, 20, 0.4)); }
+}
+
+.ring-breathe {
+  animation: ring-breathe 3s ease-in-out infinite;
+}

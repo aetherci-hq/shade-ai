@@ -1,0 +1,22 @@
+{
+  "name": "@specter/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "specter": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@specter/core": "*",
+    "chalk": "^5.4.0",
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.130",
+    "tsx": "^4.19.0"
+  }
+}
