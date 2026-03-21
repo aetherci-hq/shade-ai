@@ -44,7 +44,7 @@ const DEFAULTS: SpecterConfig = {
   },
   heartbeat: { enabled: true, intervalMinutes: 15 },
   server: { port: 3700, host: '127.0.0.1' },
-  memory: { dir: '.', stateDir: './state' },
+  memory: { dir: '.', stateDir: './state', embedModel: 'Xenova/all-MiniLM-L6-v2', autoCapture: true, maxEntries: 10000, contextLimit: 8 },
   tools: {
     allowed: ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Agent'],
     disallowed: [],

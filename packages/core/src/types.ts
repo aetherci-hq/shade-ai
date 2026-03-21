@@ -42,6 +42,10 @@ export interface SpecterConfig {
   memory: {
     dir: string;
     stateDir: string;
+    embedModel: string;
+    autoCapture: boolean;
+    maxEntries: number;
+    contextLimit: number;
   };
   tools: {
     allowed: string[];

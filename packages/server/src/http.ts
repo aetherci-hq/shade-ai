@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { readdirSync, readFileSync } from 'fs';
 import type { Agent, HeartbeatDaemon, SpecterConfig } from '@specter/core';
 import { readMemory, writeMemory, readActivity, eventBus, getConfig } from '@specter/core';
+import { getMemoryStore } from '@specter/memory';
 import { setupWebSocket } from './ws.js';
 
 export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, config: SpecterConfig) {
@@ -159,6 +160,61 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
       return reply.code(404).send({ error: 'File not found' });
     }
     return { filename: req.params.filename, content: readFileSync(filePath, 'utf-8') };
+  });
+
+  // Persistent memory API
+  app.get<{ Querystring: { q: string; limit?: string } }>('/api/memories/search', async (req) => {
+    const store = getMemoryStore();
+    const limit = parseInt(req.query.limit ?? '10', 10);
+    const results = await store.search(req.query.q, { limit });
+    return results.map(m => ({
+      id: m.id,
+      content: m.content,
+      type: m.type,
+      source: m.source,
+      tags: m.tags,
+      importance: m.importance,
+      score: m.score,
+      createdAt: m.createdAt,
+    }));
+  });
+
+  app.get<{ Querystring: { limit?: string } }>('/api/memories', async (req) => {
+    const store = getMemoryStore();
+    const limit = parseInt(req.query.limit ?? '50', 10);
+    const entries = await store.recent(limit);
+    return entries.map(m => ({
+      id: m.id,
+      content: m.content,
+      type: m.type,
+      source: m.source,
+      tags: m.tags,
+      importance: m.importance,
+      createdAt: m.createdAt,
+    }));
+  });
+
+  app.get('/api/memories/stats', async () => {
+    const store = getMemoryStore();
+    return store.stats();
+  });
+
+  app.delete<{ Params: { id: string } }>('/api/memories/:id', async (req) => {
+    const store = getMemoryStore();
+    await store.forget(req.params.id);
+    return { ok: true };
+  });
+
+  app.post<{ Body: { content: string; tags?: string[]; importance?: number } }>('/api/memories', async (req) => {
+    const store = getMemoryStore();
+    const id = await store.store({
+      content: req.body.content,
+      type: 'user',
+      source: 'dashboard',
+      tags: req.body.tags,
+      importance: req.body.importance ?? 0.7,
+    });
+    return { id };
   });
 
   await app.listen({ port: config.server.port, host: config.server.host });
