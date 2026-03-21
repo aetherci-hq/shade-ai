@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Zap, Eye, Pencil, Save, X, ChevronDown, ChevronRight, Search, Code, Copy, Check, Shield } from 'lucide-react';
 import type { AgentState } from '../hooks/useAgent';
 
@@ -195,6 +195,9 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
+  const [editingPreamble, setEditingPreamble] = useState(false);
+  const [preambleDraft, setPreambleDraft] = useState('');
+  const preambleRef = useRef<HTMLTextAreaElement>(null);
 
   const soulContent = memoryContent['SOUL'] ?? '';
 
@@ -263,6 +266,27 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
     setTimeout(() => setCopied(false), 1500);
   }, []);
 
+  const handlePreambleEdit = useCallback(() => {
+    setPreambleDraft(preamble);
+    setEditingPreamble(true);
+    setTimeout(() => preambleRef.current?.focus(), 0);
+  }, [preamble]);
+
+  const handlePreambleSave = useCallback(() => {
+    // Replace the preamble in SOUL.md (text before first ## heading)
+    const lines = soulContent.split('\n');
+    const firstSection = lines.findIndex(l => l.match(/^#{1,3}\s/));
+    const rest = firstSection > 0 ? lines.slice(firstSection).join('\n') : lines.join('\n');
+    const updated = preambleDraft.trim() + '\n\n' + rest;
+    onMemorySave('SOUL', updated);
+    setEditingPreamble(false);
+  }, [soulContent, preambleDraft, onMemorySave]);
+
+  const handlePreambleCancel = useCallback(() => {
+    setEditingPreamble(false);
+    setPreambleDraft(preamble);
+  }, [preamble]);
+
   const status = connected ? (agent.isRunning ? 'WORKING' : 'ALIVE') : 'DISCONNECTED';
   const statusColor = connected ? (agent.isRunning ? 'text-c-amber' : 'text-c-green') : 'text-c-red';
 
@@ -305,9 +329,46 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
                   {status}
                 </span>
               </div>
-              {preamble && (
-                <div className="text-[10px] text-c-dim mt-1 leading-relaxed max-w-xl">
-                  {preamble.split('\n').filter(l => l.trim()).slice(0, 2).join(' ')}
+              {editingPreamble ? (
+                <div className="mt-1.5 max-w-xl">
+                  <textarea
+                    ref={preambleRef}
+                    value={preambleDraft}
+                    onChange={e => setPreambleDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Escape') handlePreambleCancel();
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handlePreambleSave();
+                    }}
+                    className="w-full bg-c-surface border border-c-accent/25 p-2 text-[11px] text-c-text font-mono resize-none outline-none leading-relaxed"
+                    style={{ caretColor: 'var(--color-c-accent)', minHeight: 60 }}
+                    spellCheck={false}
+                  />
+                  <div className="flex gap-2 mt-1.5">
+                    <button
+                      onClick={handlePreambleSave}
+                      className="text-[9px] px-2 py-0.5 border border-c-accent text-c-accent uppercase tracking-wider font-medium hover:bg-c-accent/10 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handlePreambleCancel}
+                      className="text-[9px] px-2 py-0.5 border border-c-border text-c-muted uppercase tracking-wider hover:text-c-text transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <span className="text-[9px] text-c-muted self-center ml-1">Ctrl+Enter to save</span>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="group flex items-start gap-1.5 mt-1 max-w-xl cursor-pointer"
+                  onClick={handlePreambleEdit}
+                  title="Click to edit description"
+                >
+                  <div className="text-[10px] text-c-dim leading-relaxed">
+                    {preamble ? preamble.split('\n').filter(l => l.trim()).slice(0, 2).join(' ') : 'No description set. Click to add one.'}
+                  </div>
+                  <Pencil size={9} className="text-c-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
                 </div>
               )}
             </div>
