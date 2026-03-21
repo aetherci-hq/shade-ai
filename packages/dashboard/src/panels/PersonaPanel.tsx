@@ -26,6 +26,7 @@ interface Props {
   onMemorySave: (file: string, content: string) => void;
   onMemoryLoad: (file: string) => void;
   startTime: number;
+  appConfig: import('../App').AppConfig | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -188,13 +189,12 @@ function SoulSectionView({ section }: { section: SoulSection }) {
 
 // ─── Main Component ─────────────────────────────────────────────────
 
-export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, onMemoryLoad, startTime }: Props) {
+export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, onMemoryLoad, startTime, appConfig }: Props) {
   const [mode, setMode] = useState<'preview' | 'edit'>('preview');
   const [draft, setDraft] = useState('');
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [editingPreamble, setEditingPreamble] = useState(false);
   const [preambleDraft, setPreambleDraft] = useState('');
   const preambleRef = useRef<HTMLTextAreaElement>(null);
@@ -202,13 +202,6 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
   const soulContent = memoryContent['SOUL'] ?? '';
 
   useEffect(() => { onMemoryLoad('SOUL'); }, [onMemoryLoad]);
-
-  useEffect(() => {
-    fetch('/api/config')
-      .then(r => r.json())
-      .then(setConfig)
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!dirty) setDraft(soulContent);
@@ -225,33 +218,14 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
   }, [soulContent]);
 
   const subagents = useMemo<SubagentInfo[]>(() => {
-    if (!config) return [];
-    const agentConfig = config['agent'] as Record<string, unknown> | undefined;
-    const subagentNames = agentConfig?.['subagents'] as string[] | undefined;
-    if (!subagentNames || !Array.isArray(subagentNames)) return [];
-
-    const defaults: Record<string, SubagentInfo> = {
-      researcher: {
-        name: 'researcher',
-        description: 'Research agent for web searches, information gathering, and analysis.',
-        model: 'haiku',
-        tools: ['WebSearch', 'WebFetch', 'Read', 'Grep', 'Glob'],
-      },
-      coder: {
-        name: 'coder',
-        description: 'Coding agent for writing, editing, and debugging code.',
-        model: 'sonnet',
-        tools: ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep'],
-      },
-    };
-
-    return subagentNames.map(name => defaults[name] ?? {
+    if (!appConfig?.agent.subagents) return [];
+    return Object.entries(appConfig.agent.subagents).map(([name, def]) => ({
       name,
-      description: 'Custom subagent',
-      model: 'sonnet',
-      tools: [],
-    });
-  }, [config]);
+      description: def.description,
+      model: def.model ?? 'sonnet',
+      tools: def.tools ?? [],
+    }));
+  }, [appConfig]);
 
   const handleSave = useCallback(() => {
     onMemorySave('SOUL', draft);
@@ -290,8 +264,9 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
   const status = connected ? (agent.isRunning ? 'WORKING' : 'ALIVE') : 'DISCONNECTED';
   const statusColor = connected ? (agent.isRunning ? 'text-c-amber' : 'text-c-green') : 'text-c-red';
 
-  const modelName = (config?.['llm'] as Record<string, unknown>)?.['model'] as string ?? 'claude-sonnet-4';
-  const permMode = ((config?.['agent'] as Record<string, unknown>)?.['permissionMode'] as string ?? 'bypass').toUpperCase();
+  const agentName = appConfig?.name ?? 'Specter';
+  const modelName = appConfig?.llm.model ?? 'claude-sonnet-4';
+  const permMode = (appConfig?.agent.permissionMode ?? 'bypass').toUpperCase();
   const uptime = Date.now() - startTime;
   const charCount = soulContent.length;
   const tokenEstimate = Math.round(charCount / 4);
@@ -322,7 +297,7 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-[20px] font-medium tracking-[0.12em] text-c-text glow-text-strong">
-                  SPECTER
+                  {agentName.toUpperCase()}
                 </h1>
                 <div className={`w-1.5 h-1.5 ${connected ? (agent.isRunning ? 'bg-c-amber' : 'bg-c-green animate-pulse-live') : 'bg-c-red'}`} />
                 <span className={`text-[9px] font-medium uppercase tracking-[0.15em] ${statusColor}`}>
@@ -339,8 +314,8 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
                       if (e.key === 'Escape') handlePreambleCancel();
                       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handlePreambleSave();
                     }}
-                    className="w-full bg-c-surface border border-c-accent/25 p-2 text-[11px] text-c-text font-mono resize-none outline-none leading-relaxed"
-                    style={{ caretColor: 'var(--color-c-accent)', minHeight: 60 }}
+                    className="w-full bg-c-surface border border-c-accent/25 p-3 text-[11px] text-c-text font-mono resize-y outline-none leading-relaxed"
+                    style={{ caretColor: 'var(--color-c-accent)', minHeight: 120 }}
                     spellCheck={false}
                   />
                   <div className="flex gap-2 mt-1.5">

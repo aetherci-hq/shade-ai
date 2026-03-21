@@ -19,6 +19,19 @@ interface ChatMessage {
   ts: number;
 }
 
+export interface AppConfig {
+  name: string;
+  llm: { provider: string; model: string };
+  agent: {
+    maxTurns: number;
+    maxBudgetUsd?: number;
+    permissionMode: string;
+    subagents: Record<string, { description: string; model: string; tools: string[] }>;
+  };
+  heartbeat: { enabled: boolean; intervalMinutes: number };
+  tools: { allowed: string[]; disallowed: string[] };
+}
+
 export function App() {
   const { connected, events, send } = useSocket();
   const agent = useAgent(events);
@@ -27,9 +40,20 @@ export function App() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [conversationId] = useState(() => `chat-${Date.now()}`);
   const lastProcessedRef = useRef(0);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
 
   // Track streaming assistant message
   const streamingRef = useRef<{ ts: number; content: string } | null>(null);
+
+  // Fetch config on mount
+  useEffect(() => {
+    fetch('/api/config')
+      .then(r => r.json())
+      .then(setAppConfig)
+      .catch(() => {});
+  }, []);
+
+  const agentName = appConfig?.name ?? 'Specter';
 
   // Build chat messages from events — process new events incrementally
   useEffect(() => {
@@ -42,17 +66,14 @@ export function App() {
       if (evt.type === 'agent:text_delta') {
         const delta = evt.data['delta'] as string;
         if (!streamingRef.current) {
-          // Start a new streaming message
           streamingRef.current = { ts: evt.ts, content: delta };
           setChatMessages(prev => [...prev, { role: 'assistant', content: delta, ts: evt.ts }]);
         } else {
-          // Append to existing streaming message
           streamingRef.current.content += delta;
           const accumulated = streamingRef.current.content;
           const streamTs = streamingRef.current.ts;
           setChatMessages(prev => {
             const updated = [...prev];
-            // Find and update the streaming message
             for (let i = updated.length - 1; i >= 0; i--) {
               if (updated[i].ts === streamTs && updated[i].role === 'assistant') {
                 updated[i] = { ...updated[i], content: accumulated };
@@ -64,7 +85,6 @@ export function App() {
         }
       }
       if (evt.type === 'agent:response') {
-        // Finalize: replace streaming message with final content, or add if no streaming happened
         const text = evt.data['text'] as string;
         if (streamingRef.current) {
           const streamTs = streamingRef.current.ts;
@@ -84,7 +104,6 @@ export function App() {
         }
       }
       if (evt.type === 'agent:tool_call') {
-        // Tool call interrupts streaming — reset for next text block
         streamingRef.current = null;
         setChatMessages(prev => [...prev, {
           role: 'tool' as const,
@@ -165,9 +184,11 @@ export function App() {
       onHeartbeatTrigger={handleHeartbeatTrigger}
       onHeartbeatToggle={handleHeartbeatToggle}
       startTime={START_TIME}
+      agentName={agentName}
+      modelName={appConfig?.llm.model ?? 'sonnet'}
     >
       {view === 'activity' && <ActivityPanel events={events} />}
-      {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} isRunning={agent.isRunning} />}
+      {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} isRunning={agent.isRunning} agentName={agentName} />}
       {view === 'heartbeat' && (
         <HeartbeatPanel
           agent={agent}
@@ -187,6 +208,7 @@ export function App() {
           onMemorySave={handleMemorySave}
           onMemoryLoad={handleMemoryLoad}
           startTime={START_TIME}
+          appConfig={appConfig}
         />
       )}
       {view === 'memory' && <MemoryPanel onSave={handleMemorySave} onLoad={handleMemoryLoad} memoryContent={memoryContent} />}

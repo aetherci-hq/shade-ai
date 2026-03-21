@@ -22,6 +22,7 @@ function loadDotenv(baseDir: string): void {
 }
 
 const DEFAULTS: SpecterConfig = {
+  name: 'Specter',
   llm: { provider: 'claude', model: 'claude-sonnet-4-20250514', maxTokens: 4096 },
   agent: {
     maxTurns: 25,

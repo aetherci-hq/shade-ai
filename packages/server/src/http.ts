@@ -83,12 +83,19 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
   app.get('/api/config', async () => {
     const cfg = getConfig();
     return {
+      name: cfg.name,
       llm: { provider: cfg.llm.provider, model: cfg.llm.model },
       agent: {
         maxTurns: cfg.agent.maxTurns,
         maxBudgetUsd: cfg.agent.maxBudgetUsd,
         permissionMode: cfg.agent.permissionMode,
-        subagents: cfg.agent.subagents ? Object.keys(cfg.agent.subagents) : [],
+        subagents: cfg.agent.subagents ? Object.fromEntries(
+          Object.entries(cfg.agent.subagents).map(([name, def]) => [name, {
+            description: def.description,
+            model: def.model,
+            tools: def.tools,
+          }])
+        ) : {},
       },
       heartbeat: cfg.heartbeat,
       tools: { allowed: cfg.tools.allowed, disallowed: cfg.tools.disallowed },

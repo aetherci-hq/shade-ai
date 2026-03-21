@@ -19,6 +19,7 @@ export interface AgentDefinition {
 }
 
 export interface SpecterConfig {
+  name: string;
   llm: {
     provider: string;
     model: string;
