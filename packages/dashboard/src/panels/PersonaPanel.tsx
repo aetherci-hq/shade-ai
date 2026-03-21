@@ -6,7 +6,7 @@ import type { AgentState } from '../hooks/useAgent';
 
 interface SoulSection {
   title: string;
-  level: number; // 1 for #, 2 for ##, 3 for ###
+  level: number;
   content: string;
   lineStart: number;
   lineEnd: number;
@@ -108,9 +108,9 @@ function SubagentCard({ agent }: { agent: SubagentInfo }) {
     opus: 'text-c-amber',
   };
   const modelBorderColors: Record<string, string> = {
-    haiku: 'border-[rgba(188,140,255,0.25)]',
-    sonnet: 'border-[rgba(88,166,255,0.25)]',
-    opus: 'border-[rgba(210,153,34,0.25)]',
+    haiku: 'border-c-purple/20',
+    sonnet: 'border-c-cyan/20',
+    opus: 'border-c-amber/20',
   };
   const accentColor = modelColors[agent.model] ?? 'text-c-dim';
   const borderColor = modelBorderColors[agent.model] ?? 'border-c-border';
@@ -119,17 +119,14 @@ function SubagentCard({ agent }: { agent: SubagentInfo }) {
 
   return (
     <div className={`bg-c-surface border ${borderColor} p-3`}>
-      {/* Header */}
       <div className="flex items-center gap-2 mb-2">
         <span className={accentColor}>{icon}</span>
-        <span className="text-c-text font-semibold text-[12px] uppercase tracking-[0.06em]">{agent.name}</span>
-        <span className={`ml-auto text-[9px] font-semibold uppercase tracking-[0.1em] px-1.5 py-px border ${borderColor} ${accentColor}`}>
+        <span className="text-c-text font-medium text-[11px] uppercase tracking-[0.06em]">{agent.name}</span>
+        <span className={`ml-auto text-[9px] font-medium uppercase tracking-[0.1em] px-1.5 py-px border ${borderColor} ${accentColor}`}>
           {agent.model}
         </span>
       </div>
-      {/* Description */}
       <div className="text-[10px] text-c-dim mb-2 leading-relaxed">{agent.description}</div>
-      {/* Tools */}
       <div className="flex flex-wrap gap-1">
         {agent.tools.map(tool => (
           <span key={tool} className="text-[9px] text-c-muted px-1.5 py-px bg-c-hover border border-c-border">
@@ -146,27 +143,20 @@ function SubagentCard({ agent }: { agent: SubagentInfo }) {
 function SoulSectionView({ section }: { section: SoulSection }) {
   const [collapsed, setCollapsed] = useState(section.level > 2);
 
-  // Simple markdown-ish rendering for preview
   const rendered = useMemo(() => {
     return section.content
       .split('\n')
       .map((line, i) => {
-        // Bold
-        const boldProcessed = line.replace(/\*\*(.+?)\*\*/g, '<b class="text-c-text font-semibold">$1</b>');
-        // Inline code
+        const boldProcessed = line.replace(/\*\*(.+?)\*\*/g, '<b class="text-c-text font-medium">$1</b>');
         const codeProcessed = boldProcessed.replace(/`([^`]+)`/g, '<code class="text-c-cyan text-[10px] bg-c-surface px-1">$1</code>');
-        // List items
         if (line.match(/^[-*]\s/)) {
-          return <div key={i} className="flex gap-1.5 py-px"><span className="text-c-green shrink-0">{'>'}</span><span className="text-c-dim" dangerouslySetInnerHTML={{ __html: codeProcessed.replace(/^[-*]\s/, '') }} /></div>;
+          return <div key={i} className="flex gap-1.5 py-px"><span className="text-c-accent shrink-0">-</span><span className="text-c-dim" dangerouslySetInnerHTML={{ __html: codeProcessed.replace(/^[-*]\s/, '') }} /></div>;
         }
-        // Numbered items
         if (line.match(/^\d+\.\s/)) {
           const num = line.match(/^(\d+)\./)?.[1];
           return <div key={i} className="flex gap-1.5 py-px"><span className="text-c-muted shrink-0 w-3 text-right">{num}.</span><span className="text-c-dim" dangerouslySetInnerHTML={{ __html: codeProcessed.replace(/^\d+\.\s*/, '') }} /></div>;
         }
-        // Empty line
         if (!line.trim()) return <div key={i} className="h-1.5" />;
-        // Regular text
         return <div key={i} className="text-c-dim py-px" dangerouslySetInnerHTML={{ __html: codeProcessed }} />;
       });
   }, [section.content]);
@@ -180,7 +170,7 @@ function SoulSectionView({ section }: { section: SoulSection }) {
         className="flex items-center gap-1.5 w-full text-left py-1 group"
       >
         {collapsed ? <ChevronRight size={10} className="text-c-muted shrink-0" /> : <ChevronDown size={10} className="text-c-muted shrink-0" />}
-        <span className={`font-semibold uppercase tracking-[0.08em] group-hover:text-c-green transition-colors ${
+        <span className={`font-medium uppercase tracking-[0.08em] group-hover:text-c-accent transition-colors ${
           section.level === 2 ? 'text-[11px] text-c-text' : 'text-[10px] text-c-dim'
         }`}>
           {section.title}
@@ -208,10 +198,8 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
 
   const soulContent = memoryContent['SOUL'] ?? '';
 
-  // Load SOUL.md on mount
   useEffect(() => { onMemoryLoad('SOUL'); }, [onMemoryLoad]);
 
-  // Load config for subagent info
   useEffect(() => {
     fetch('/api/config')
       .then(r => r.json())
@@ -219,7 +207,6 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
       .catch(() => {});
   }, []);
 
-  // Sync draft when content changes and not editing
   useEffect(() => {
     if (!dirty) setDraft(soulContent);
   }, [soulContent, dirty]);
@@ -227,7 +214,6 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
   const sections = useMemo(() => parseSections(soulContent), [soulContent]);
   const traits = useMemo(() => detectTraits(soulContent), [soulContent]);
 
-  // Extract preamble (text before first ##)
   const preamble = useMemo(() => {
     const lines = soulContent.split('\n');
     const firstSection = lines.findIndex(l => l.match(/^#{1,3}\s/));
@@ -235,13 +221,10 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
     return lines.slice(0, firstSection).join('\n').trim();
   }, [soulContent]);
 
-  // Parse subagents from config
   const subagents = useMemo<SubagentInfo[]>(() => {
     if (!config) return [];
     const agentConfig = config['agent'] as Record<string, unknown> | undefined;
     const subagentNames = agentConfig?.['subagents'] as string[] | undefined;
-    // Config returns subagent names as array. For full info, we use defaults from the config
-    // The actual definitions are in specter.config.yaml — we show what the API tells us
     if (!subagentNames || !Array.isArray(subagentNames)) return [];
 
     const defaults: Record<string, SubagentInfo> = {
@@ -275,7 +258,6 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
   }, [draft, onMemorySave]);
 
   const handleCopySessionId = useCallback(() => {
-    // Session ID would come from events — for now use a placeholder
     navigator.clipboard.writeText('session-id').catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -283,20 +265,19 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
 
   const status = connected ? (agent.isRunning ? 'WORKING' : 'ALIVE') : 'DISCONNECTED';
   const statusColor = connected ? (agent.isRunning ? 'text-c-amber' : 'text-c-green') : 'text-c-red';
-  const statusDotColor = connected ? (agent.isRunning ? 'bg-c-amber shadow-[0_0_6px_rgba(210,153,34,0.5)]' : 'bg-c-green shadow-[0_0_6px_rgba(57,255,20,0.6)] animate-pulse-live') : 'bg-c-red shadow-[0_0_4px_rgba(248,81,73,0.5)]';
 
   const modelName = (config?.['llm'] as Record<string, unknown>)?.['model'] as string ?? 'claude-sonnet-4';
   const permMode = ((config?.['agent'] as Record<string, unknown>)?.['permissionMode'] as string ?? 'bypass').toUpperCase();
   const uptime = Date.now() - startTime;
   const charCount = soulContent.length;
-  const tokenEstimate = Math.round(charCount / 4); // rough estimate
+  const tokenEstimate = Math.round(charCount / 4);
 
   return (
     <div className="h-full flex flex-col bg-c-panel overflow-hidden">
       {/* Header */}
       <div className="flex justify-between items-center px-3 py-1.5 border-b border-c-border shrink-0">
-        <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-c-dim glow-text flex items-center gap-1.5">
-          <Zap size={12} className="text-c-green" />
+        <span className="text-[10px] font-medium tracking-[0.15em] uppercase text-c-dim flex items-center gap-1.5">
+          <Zap size={11} className="text-c-accent" />
           Agent Persona
         </span>
         <div className="flex items-center gap-2">
@@ -311,21 +292,19 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
 
-        {/* ─── Identity Card ─── */}
+        {/* Identity Card */}
         <div className="px-4 pt-4 pb-3">
-          {/* Agent name + status */}
           <div className="flex items-center gap-3 mb-3">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-[22px] font-bold tracking-[0.08em] text-c-text glow-text-strong">
+                <h1 className="text-[20px] font-medium tracking-[0.12em] text-c-text glow-text-strong">
                   SPECTER
                 </h1>
-                <div className={`w-2 h-2 rounded-full ${statusDotColor}`} />
-                <span className={`text-[9px] font-semibold uppercase tracking-[0.15em] ${statusColor}`}>
+                <div className={`w-1.5 h-1.5 ${connected ? (agent.isRunning ? 'bg-c-amber' : 'bg-c-green animate-pulse-live') : 'bg-c-red'}`} />
+                <span className={`text-[9px] font-medium uppercase tracking-[0.15em] ${statusColor}`}>
                   {status}
                 </span>
               </div>
-              {/* Preamble as tagline */}
               {preamble && (
                 <div className="text-[10px] text-c-dim mt-1 leading-relaxed max-w-xl">
                   {preamble.split('\n').filter(l => l.trim()).slice(0, 2).join(' ')}
@@ -336,10 +315,10 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
 
           {/* Badge row */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.08em] px-2 py-0.5 border border-[rgba(88,166,255,0.3)] text-c-cyan bg-[rgba(88,166,255,0.05)]">
+            <span className="text-[9px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 border border-c-cyan/25 text-c-cyan">
               {modelName}
             </span>
-            <span className="text-[9px] font-semibold uppercase tracking-[0.08em] px-2 py-0.5 border border-[rgba(210,153,34,0.3)] text-c-amber bg-[rgba(210,153,34,0.05)] flex items-center gap-1">
+            <span className="text-[9px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 border border-c-amber/25 text-c-amber flex items-center gap-1">
               <Shield size={8} />
               {permMode}
             </span>
@@ -347,7 +326,7 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
               onClick={handleCopySessionId}
               className="text-[9px] font-medium uppercase tracking-[0.06em] px-2 py-0.5 border border-c-border text-c-muted hover:text-c-dim hover:border-c-dim transition-colors flex items-center gap-1"
             >
-              {copied ? <Check size={8} className="text-c-green" /> : <Copy size={8} />}
+              {copied ? <Check size={8} className="text-c-accent" /> : <Copy size={8} />}
               session
             </button>
           </div>
@@ -373,7 +352,7 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
           </div>
         </div>
 
-        {/* ─── Personality Traits ─── */}
+        {/* Personality Traits */}
         <div className="px-4 py-2 border-t border-c-border">
           <div className="flex flex-wrap gap-1.5">
             {traits.map(t => (
@@ -381,25 +360,23 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
                 key={t.label}
                 className={`text-[9px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 border transition-all ${
                   t.active
-                    ? 'text-c-green border-[rgba(57,255,20,0.25)] bg-[rgba(57,255,20,0.05)]'
+                    ? 'text-c-accent border-c-accent/20 bg-c-accent/5'
                     : 'text-c-muted border-c-border opacity-40'
                 }`}
               >
-                {t.label}{t.active ? ' ✓' : ''}
+                {t.label}
               </span>
             ))}
           </div>
         </div>
 
-        {/* ─── Divider ─── */}
         <div className="border-t border-c-border" />
 
-        {/* ─── Soul Editor ─── */}
+        {/* Soul Editor */}
         <div className="px-4 py-3">
-          {/* Editor header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted">
+              <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted">
                 SOUL.md
               </div>
               <span className="text-[9px] text-c-muted">
@@ -412,11 +389,11 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
                   <button
                     onClick={handleSave}
                     disabled={!dirty}
-                    className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 border transition-all ${
+                    className={`flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider px-2 py-0.5 border transition-all ${
                       saved
-                        ? 'text-c-green border-c-green bg-[rgba(57,255,20,0.1)]'
+                        ? 'text-c-accent border-c-accent bg-c-accent/10'
                         : dirty
-                          ? 'text-c-green border-c-green/40 hover:bg-[rgba(57,255,20,0.08)]'
+                          ? 'text-c-accent border-c-accent/30 hover:bg-c-accent/5'
                           : 'text-c-muted border-c-border opacity-40'
                     }`}
                   >
@@ -436,8 +413,8 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
                 onClick={() => setMode(mode === 'preview' ? 'edit' : 'preview')}
                 className={`flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider px-2 py-0.5 border transition-all ${
                   mode === 'edit'
-                    ? 'text-c-amber border-c-amber/30 bg-[rgba(210,153,34,0.05)]'
-                    : 'text-c-muted border-c-border hover:text-c-green hover:border-c-green/30'
+                    ? 'text-c-amber border-c-amber/25 bg-c-amber/5'
+                    : 'text-c-muted border-c-border hover:text-c-accent hover:border-c-accent/25'
                 }`}
               >
                 {mode === 'preview' ? <><Pencil size={8} /> Edit</> : <><Eye size={8} /> Preview</>}
@@ -445,13 +422,12 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
             </div>
           </div>
 
-          {/* Editor body */}
           {mode === 'edit' ? (
             <textarea
               value={draft}
               onChange={e => { setDraft(e.target.value); setDirty(true); }}
-              className="w-full bg-c-surface border border-c-border p-3 text-c-text font-mono text-[11px] resize-none outline-none focus:border-[rgba(57,255,20,0.3)] leading-relaxed"
-              style={{ caretColor: 'var(--color-c-green)', minHeight: 'calc(100vh - 420px)' }}
+              className="w-full bg-c-surface border border-c-border p-3 text-c-text font-mono text-[11px] resize-none outline-none focus:border-c-accent/25 leading-relaxed"
+              style={{ caretColor: 'var(--color-c-accent)', minHeight: 'calc(100vh - 420px)' }}
               spellCheck={false}
             />
           ) : (
@@ -469,12 +445,11 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
           )}
         </div>
 
-        {/* ─── Divider ─── */}
         <div className="border-t border-c-border" />
 
-        {/* ─── Subagent Gallery ─── */}
+        {/* Subagent Gallery */}
         <div className="px-4 py-3 pb-6">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted mb-3">
+          <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted mb-3">
             Crew Manifest · {subagents.length} subagent{subagents.length !== 1 ? 's' : ''}
           </div>
 

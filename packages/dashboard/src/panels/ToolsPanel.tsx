@@ -43,7 +43,6 @@ export function ToolsPanel({ events }: Props) {
 
   useEffect(() => { refreshTools(); }, []);
 
-  // Refresh when agent finishes
   useEffect(() => {
     if (events.length === 0) return;
     const latest = events[0];
@@ -65,7 +64,6 @@ export function ToolsPanel({ events }: Props) {
 
   const toolEvents = events.filter(e => e.type === 'agent:tool_call' || e.type === 'agent:tool_result');
 
-  // Build tool stats
   const stats = new Map<string, { calls: number; errors: number; totalMs: number }>();
   for (const evt of toolEvents) {
     if (evt.type === 'agent:tool_result') {
@@ -86,15 +84,15 @@ export function ToolsPanel({ events }: Props) {
   return (
     <Panel title="Tools & Workspace" className="h-full">
       {/* Registered Tools */}
-      <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted mb-2">Registered Tools</div>
+      <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted mb-2">Registered Tools</div>
       <div className="space-y-1 mb-4">
         {registered.map(tool => {
           const s = stats.get(tool.name);
           return (
             <div key={tool.name} className="bg-c-surface border border-c-border p-2">
               <div className="flex items-center gap-2 text-[11px]">
-                <span className="text-c-cyan font-semibold">{tool.name}</span>
-                <span className="text-[10px] font-medium uppercase tracking-wider text-c-muted border border-c-border px-1.5 py-px">
+                <span className="text-c-cyan font-medium">{tool.name}</span>
+                <span className="text-[9px] font-medium uppercase tracking-wider text-c-muted border border-c-border px-1.5 py-px">
                   {tool.type}
                 </span>
                 {s && (
@@ -111,7 +109,7 @@ export function ToolsPanel({ events }: Props) {
       </div>
 
       {/* User Tools */}
-      <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted mb-2">
+      <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted mb-2">
         User Tools <span className="text-c-dim">({userTools.length} in tools/)</span>
       </div>
       {userTools.length === 0 ? (
@@ -124,7 +122,7 @@ export function ToolsPanel({ events }: Props) {
                 onClick={() => toggleExpand(`tool-${tool.filename}`, `/api/tools/${tool.filename}`)}
                 className="w-full flex items-center justify-between p-2 text-[11px] hover:bg-c-hover transition-colors"
               >
-                <span className="text-c-green font-medium">{tool.filename}</span>
+                <span className="text-c-accent font-medium">{tool.filename}</span>
                 <span className="text-c-muted text-[10px]">{expanded === `tool-${tool.filename}` ? 'collapse' : 'view source'}</span>
               </button>
               {expanded === `tool-${tool.filename}` && (
@@ -138,7 +136,7 @@ export function ToolsPanel({ events }: Props) {
       )}
 
       {/* Workspace Files */}
-      <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted mb-2">
+      <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted mb-2">
         Agent-Created Files <span className="text-c-dim">({workspaceFiles.length} in workspace)</span>
       </div>
       {workspaceFiles.length === 0 ? (
@@ -168,7 +166,7 @@ export function ToolsPanel({ events }: Props) {
       )}
 
       {/* Execution History */}
-      <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted mb-2">Execution History</div>
+      <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted mb-2">Execution History</div>
       {toolEvents.length === 0 ? (
         <div className="text-c-muted text-[11px]">No tool calls yet.</div>
       ) : (

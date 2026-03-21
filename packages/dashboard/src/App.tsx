@@ -164,6 +164,7 @@ export function App() {
       agent={agent}
       onHeartbeatTrigger={handleHeartbeatTrigger}
       onHeartbeatToggle={handleHeartbeatToggle}
+      startTime={START_TIME}
     >
       {view === 'activity' && <ActivityPanel events={events} />}
       {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} isRunning={agent.isRunning} />}

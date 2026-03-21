@@ -11,7 +11,7 @@ export function Panel({ title, status, children, className = '' }: PanelProps) {
   return (
     <div className={`bg-c-panel flex flex-col min-h-0 overflow-hidden ${className}`}>
       <div className="flex justify-between items-center px-3 py-1.5 border-b border-c-border shrink-0">
-        <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-c-dim glow-text">
+        <span className="text-[10px] font-medium tracking-[0.15em] uppercase text-c-dim">
           {title}
         </span>
         {status && <div className="flex items-center gap-2 text-[10px]">{status}</div>}
