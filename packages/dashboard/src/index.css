@@ -1,49 +1,52 @@
 @import "tailwindcss";
 
 @theme {
-  --color-c-bg: #06080a;
-  --color-c-panel: #0d1117;
-  --color-c-surface: #161b22;
-  --color-c-hover: #1c2128;
-  --color-c-border: #21262d;
-  --color-c-text: #c9d1d9;
-  --color-c-dim: #8b949e;
-  --color-c-muted: #484f58;
-  --color-c-green: #39ff14;
-  --color-c-cyan: #58a6ff;
-  --color-c-amber: #d29922;
-  --color-c-red: #f85149;
-  --color-c-purple: #bc8cff;
+  --color-c-bg: #0A0A0C;
+  --color-c-panel: #101013;
+  --color-c-surface: #18181B;
+  --color-c-hover: #202024;
+  --color-c-border: #26262C;
+  --color-c-text: #C4C1B9;
+  --color-c-dim: #85827C;
+  --color-c-muted: #48463F;
+  --color-c-accent: #BF956B;
+  --color-c-green: #6B9B6B;
+  --color-c-cyan: #7B8DA6;
+  --color-c-amber: #B5985C;
+  --color-c-red: #A65E5E;
+  --color-c-purple: #8575A0;
 
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-mono: 'DM Mono', monospace;
 
   --animate-blink: blink 1s step-end infinite;
-  --animate-pulse-live: pulse-live 2s ease-in-out infinite;
-  --animate-fade-in: fade-in 0.3s ease-out forwards;
+  --animate-pulse-live: pulse-live 3s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.2s ease-out forwards;
 
   @keyframes blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
   }
   @keyframes pulse-live {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(57, 255, 20, 0.4); }
-    50% { box-shadow: 0 0 0 4px rgba(57, 255, 20, 0); }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(4px); }
+    from { opacity: 0; transform: translateY(2px); }
     to { opacity: 1; transform: translateY(0); }
   }
 }
 
 body {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
   color: var(--color-c-text);
   background: var(--color-c-bg);
   margin: 0;
   padding: 0;
   overflow: hidden;
   height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -52,45 +55,35 @@ body {
 }
 
 ::selection {
-  background: rgba(57, 255, 20, 0.2);
-  color: var(--color-c-green);
+  background: rgba(191, 149, 107, 0.2);
+  color: var(--color-c-accent);
 }
 
+/* Scrollbar — thin, sharp, minimal */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-c-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--color-c-border); }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-c-muted); }
 * { scrollbar-width: thin; scrollbar-color: var(--color-c-border) transparent; }
 
-.scanlines::after {
+/* Grain overlay — very subtle warmth */
+.grain::after {
   content: '';
   position: fixed;
   inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 1px,
-    rgba(0, 0, 0, 0.025) 1px,
-    rgba(0, 0, 0, 0.025) 2px
-  );
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
   pointer-events: none;
   z-index: 9999;
 }
 
+/* Glow utilities — warm, restrained */
 .glow-text {
-  text-shadow: 0 0 12px rgba(57, 255, 20, 0.3);
+  text-shadow: 0 0 8px rgba(191, 149, 107, 0.15);
 }
 
 .glow-text-strong {
-  text-shadow: 0 0 10px rgba(57, 255, 20, 0.5), 0 0 20px rgba(57, 255, 20, 0.2);
-}
-
-/* Heartbeat ring glow animation */
-@keyframes ring-breathe {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(57, 255, 20, 0.2)); }
-  50% { filter: drop-shadow(0 0 12px rgba(57, 255, 20, 0.4)); }
-}
-
-.ring-breathe {
-  animation: ring-breathe 3s ease-in-out infinite;
+  text-shadow: 0 0 12px rgba(191, 149, 107, 0.25);
 }

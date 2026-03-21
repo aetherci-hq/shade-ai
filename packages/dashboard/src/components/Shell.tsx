@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { Activity, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, HeartPulse, Fingerprint } from 'lucide-react';
 import type { AgentState } from '../hooks/useAgent';
 
@@ -12,6 +13,7 @@ interface ShellProps {
   agent: AgentState;
   onHeartbeatTrigger: () => void;
   onHeartbeatToggle: (enabled: boolean) => void;
+  startTime: number;
 }
 
 const NAV_ITEMS: { id: View; label: string; icon: typeof Activity }[] = [
@@ -37,113 +39,120 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle }: ShellProps) {
+function formatUptime(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
+
+export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime }: ShellProps) {
   const [clock, setClock] = useState(new Date());
 
-  // Update clock every second
-  useState(() => {
+  useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 1000);
     return () => clearInterval(timer);
-  });
+  }, []);
+
+  const uptime = Date.now() - startTime;
 
   return (
-    <div className="flex h-screen w-screen scanlines">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-black/40 backdrop-blur-xl border-r border-white/10 flex flex-col">
-        {/* Logo */}
-        <div className="px-4 py-4 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <Zap size={16} className="text-c-green" />
-            <span className="text-sm font-bold text-c-text glow-text-strong tracking-wider">SPECTER</span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-c-green shadow-[0_0_6px_rgba(57,255,20,0.6)] animate-pulse-live' : 'bg-c-red shadow-[0_0_4px_rgba(248,81,73,0.5)]'}`} />
-            <span className={`text-[10px] font-medium uppercase tracking-[0.1em] ${connected ? 'text-c-green' : 'text-c-red'}`}>
-              {connected ? (agent.isRunning ? 'WORKING' : 'ALIVE') : 'DISCONNECTED'}
-            </span>
-          </div>
-        </div>
+    <div className="flex flex-col h-screen w-screen grain">
+      {/* Accent line — signature top border */}
+      <div className="h-px w-full bg-c-accent opacity-30 shrink-0" />
 
-        {/* Nav */}
-        <nav className="flex-1 px-2 py-3">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted px-2 mb-2">Navigation</div>
-          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar */}
+        <aside className="w-52 shrink-0 bg-c-panel border-r border-c-border flex flex-col">
+          {/* Logo */}
+          <div className="px-4 py-4 border-b border-c-border">
+            <div className="flex items-center gap-2">
+              <Zap size={14} className="text-c-accent" />
+              <span className="text-[11px] font-medium text-c-text glow-text-strong tracking-[0.2em]">SPECTER</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-2">
+              <div className={`w-1.5 h-1.5 ${connected ? 'bg-c-green animate-pulse-live' : 'bg-c-red'}`} />
+              <span className={`text-[10px] font-medium uppercase tracking-[0.1em] ${connected ? (agent.isRunning ? 'text-c-amber' : 'text-c-green') : 'text-c-red'}`}>
+                {connected ? (agent.isRunning ? 'Working' : 'Alive') : 'Disconnected'}
+              </span>
+            </div>
+          </div>
+
+          {/* Nav */}
+          <nav className="flex-1 px-2 py-3">
+            <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted px-2 mb-2">Navigation</div>
+            {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => onViewChange(id)}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-[11px] transition-colors mb-px border-l ${
+                  view === id
+                    ? 'bg-c-surface text-c-text border-c-accent'
+                    : 'text-c-dim hover:bg-c-surface/50 hover:text-c-text border-transparent'
+                }`}
+              >
+                <Icon size={13} className={view === id ? 'text-c-accent' : 'text-c-muted'} />
+                {label}
+                {view === id && <ChevronRight size={10} className="ml-auto text-c-accent" />}
+              </button>
+            ))}
+          </nav>
+
+          {/* Heartbeat Widget */}
+          <div className="px-3 py-3 border-t border-c-border">
+            <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted mb-2">Heartbeat</div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className={`w-1.5 h-1.5 ${agent.heartbeat.enabled ? 'bg-c-green' : 'bg-c-muted'}`} />
+              <span className="text-[10px] text-c-dim">
+                {agent.heartbeat.enabled ? formatCountdown(agent.heartbeat.nextWake) : 'Disabled'}
+              </span>
+              <button
+                onClick={() => onHeartbeatToggle(!agent.heartbeat.enabled)}
+                className="ml-auto text-[9px] text-c-muted hover:text-c-accent transition-colors uppercase tracking-wider border border-c-border px-1.5 py-0.5"
+              >
+                {agent.heartbeat.enabled ? 'off' : 'on'}
+              </button>
+            </div>
             <button
-              key={id}
-              onClick={() => onViewChange(id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors mb-0.5 border-l-2 ${
-                view === id
-                  ? 'bg-white/10 text-white border-l-c-green'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white border-transparent'
-              }`}
+              onClick={onHeartbeatTrigger}
+              className="w-full text-[9px] py-1 border border-c-border text-c-muted hover:text-c-accent hover:border-c-accent/40 transition-colors uppercase tracking-wider"
             >
-              <Icon size={14} className={view === id ? 'text-c-green' : 'text-gray-500'} />
-              {label}
-              {view === id && <ChevronRight size={12} className="ml-auto text-c-green" />}
-            </button>
-          ))}
-        </nav>
-
-        {/* Heartbeat Widget */}
-        <div className="px-3 py-3 border-t border-white/10">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted mb-2">Heartbeat</div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${agent.heartbeat.enabled ? 'bg-c-green shadow-[0_0_4px_rgba(57,255,20,0.5)]' : 'bg-c-muted'}`} />
-            <span className="text-[11px] text-c-dim">
-              {agent.heartbeat.enabled ? `Next: ${formatCountdown(agent.heartbeat.nextWake)}` : 'Disabled'}
-            </span>
-            <span className={`ml-auto text-[10px] font-semibold uppercase tracking-wider ${agent.heartbeat.enabled ? 'text-c-green' : 'text-c-red'}`}>
-              {agent.heartbeat.enabled ? 'on' : 'off'}
-            </span>
-            <button
-              onClick={() => onHeartbeatToggle(!agent.heartbeat.enabled)}
-              className="text-[10px] text-c-muted hover:text-c-green transition-colors uppercase tracking-wider border border-c-border px-1.5 py-0.5"
-            >
-              {agent.heartbeat.enabled ? 'disable' : 'enable'}
+              Trigger Now
             </button>
           </div>
-          {agent.heartbeat.lastDecision && (
-            <div className="text-[10px] text-c-muted truncate mb-1.5">
-              Last: <span className={agent.heartbeat.lastDecision === 'idle' ? 'text-c-dim' : 'text-c-green'}>{agent.heartbeat.lastDecision}</span>
-            </div>
-          )}
-          <button
-            onClick={onHeartbeatTrigger}
-            className="w-full text-[10px] py-1 border border-c-border text-c-muted hover:text-c-green hover:border-c-green transition-colors uppercase tracking-wider"
-          >
-            Trigger Now
-          </button>
-        </div>
+        </aside>
 
-        {/* Stats Widget */}
-        <div className="px-3 py-3 border-t border-white/10">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-c-muted mb-2">Session Stats</div>
-          <div className="space-y-1">
-            <div className="flex justify-between text-[11px]">
-              <span className="text-c-muted">Tokens In</span>
-              <span className="text-c-cyan font-medium">{formatTokens(agent.totalTokens.input)}</span>
-            </div>
-            <div className="flex justify-between text-[11px]">
-              <span className="text-c-muted">Tokens Out</span>
-              <span className="text-c-cyan font-medium">{formatTokens(agent.totalTokens.output)}</span>
-            </div>
-            <div className="flex justify-between text-[11px]">
-              <span className="text-c-muted">Tool Calls</span>
-              <span className="text-c-amber font-medium">{agent.toolCalls}</span>
-            </div>
-          </div>
-        </div>
+        {/* Main */}
+        <main className="flex-1 flex flex-col min-w-0">
+          {children}
+        </main>
+      </div>
 
-        {/* Clock */}
-        <div className="px-3 py-2 border-t border-white/10 text-center text-[11px] text-c-muted font-medium">
+      {/* Bottom Status Bar */}
+      <footer className="h-6 shrink-0 bg-c-bg border-t border-c-border flex items-center px-3 gap-4 text-[10px]">
+        <div className="flex items-center gap-1.5">
+          <div className={`w-1 h-1 ${connected ? 'bg-c-green' : 'bg-c-red'}`} />
+          <span className={connected ? 'text-c-dim' : 'text-c-red'}>
+            {connected ? 'connected' : 'disconnected'}
+          </span>
+        </div>
+        <span className="text-c-border">|</span>
+        <span className="text-c-muted">sonnet</span>
+        <span className="text-c-border">|</span>
+        <span className="text-c-muted">up {formatUptime(uptime)}</span>
+        <span className="text-c-border">|</span>
+        <span className="text-c-dim">
+          <span className="text-c-muted">in </span>{formatTokens(agent.totalTokens.input)}
+          <span className="text-c-muted ml-2">out </span>{formatTokens(agent.totalTokens.output)}
+        </span>
+        <span className="text-c-border">|</span>
+        <span className="text-c-muted">{agent.toolCalls} calls</span>
+        <div className="ml-auto text-c-muted">
           {clock.toLocaleTimeString('en-US', { hour12: false })}
         </div>
-      </aside>
-
-      {/* Main */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {children}
-      </main>
+      </footer>
     </div>
   );
 }

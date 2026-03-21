@@ -34,10 +34,8 @@ function parseToolMessage(content: string): {
   if (callMatch) {
     const name = callMatch[1];
     const inputStr = callMatch[2];
-    // Build a one-line summary
     let summary = '';
     try {
-      // Try to extract the most useful field
       if (name === 'Read' || name === 'Write' || name === 'Edit') {
         const pathMatch = inputStr.match(/"file_path"\s*:\s*"([^"]+)"/);
         summary = pathMatch ? pathMatch[1].split('/').slice(-2).join('/') : inputStr.slice(0, 60);
@@ -85,7 +83,7 @@ function getToolColor(name: string): string {
   if (fileTools.includes(name)) return 'text-c-cyan';
   if (shellTools.includes(name)) return 'text-c-amber';
   if (webTools.includes(name)) return 'text-c-purple';
-  if (agentTools.includes(name)) return 'text-c-green';
+  if (agentTools.includes(name)) return 'text-c-accent';
   return 'text-c-dim';
 }
 
@@ -95,10 +93,10 @@ function getToolBorderColor(name: string): string {
   const webTools = ['WebFetch', 'WebSearch'];
   const agentTools = ['Agent', 'Task'];
 
-  if (fileTools.includes(name)) return 'border-[rgba(88,166,255,0.15)]';
-  if (shellTools.includes(name)) return 'border-[rgba(210,153,34,0.15)]';
-  if (webTools.includes(name)) return 'border-[rgba(188,140,255,0.15)]';
-  if (agentTools.includes(name)) return 'border-[rgba(57,255,20,0.15)]';
+  if (fileTools.includes(name)) return 'border-c-cyan/15';
+  if (shellTools.includes(name)) return 'border-c-amber/15';
+  if (webTools.includes(name)) return 'border-c-purple/15';
+  if (agentTools.includes(name)) return 'border-c-accent/15';
   return 'border-c-border';
 }
 
@@ -142,12 +140,12 @@ function renderMarkdown(text: string): JSX.Element[] {
     // Headers
     const h2Match = line.match(/^##\s+(.+)/);
     if (h2Match) {
-      elements.push(<div key={i} className="text-c-text font-bold text-[12px] mt-2 mb-0.5 uppercase tracking-[0.06em]">{h2Match[1]}</div>);
+      elements.push(<div key={i} className="text-c-text font-medium text-[12px] mt-2 mb-0.5 uppercase tracking-[0.06em]">{h2Match[1]}</div>);
       continue;
     }
     const h3Match = line.match(/^###\s+(.+)/);
     if (h3Match) {
-      elements.push(<div key={i} className="text-c-dim font-semibold text-[11px] mt-1.5 mb-0.5">{h3Match[1]}</div>);
+      elements.push(<div key={i} className="text-c-dim font-medium text-[11px] mt-1.5 mb-0.5">{h3Match[1]}</div>);
       continue;
     }
 
@@ -159,16 +157,14 @@ function renderMarkdown(text: string): JSX.Element[] {
 
     // Process inline formatting
     let processed = line;
-    // Bold
-    processed = processed.replace(/\*\*(.+?)\*\*/g, '<b class="text-c-text font-semibold">$1</b>');
-    // Inline code
-    processed = processed.replace(/`([^`]+)`/g, '<code class="text-c-cyan text-[10px] bg-c-bg px-1 py-px border border-c-border">$1</code>');
+    processed = processed.replace(/\*\*(.+?)\*\*/g, '<b class="text-c-text font-medium">$1</b>');
+    processed = processed.replace(/`([^`]+)`/g, '<code class="text-c-cyan text-[10px] bg-c-surface px-1 py-px border border-c-border">$1</code>');
 
     // List items
     if (line.match(/^[-*]\s/)) {
       elements.push(
         <div key={i} className="flex gap-1.5 py-px pl-1">
-          <span className="text-c-green shrink-0 text-[10px]">{'>'}</span>
+          <span className="text-c-accent shrink-0 text-[10px]">-</span>
           <span className="text-c-dim text-[11px]" dangerouslySetInnerHTML={{ __html: processed.replace(/^[-*]\s/, '') }} />
         </div>
       );
@@ -214,7 +210,7 @@ function ToolCallCard({ content, ts }: { content: string; ts: number }) {
   if (parsed.type === 'subagent') {
     return (
       <div className="flex items-center gap-2 py-1 pl-3 border-l border-c-purple/30 animate-fade-in">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.08em] px-1.5 py-px border border-c-purple/25 text-c-purple bg-[rgba(188,140,255,0.05)]">
+        <span className="text-[9px] font-medium uppercase tracking-[0.08em] px-1.5 py-px border border-c-purple/20 text-c-purple">
           {parsed.toolName}
         </span>
         <span className="text-c-dim text-[10px] truncate">{parsed.summary}</span>
@@ -223,11 +219,10 @@ function ToolCallCard({ content, ts }: { content: string; ts: number }) {
   }
 
   if (parsed.type === 'result') {
-    // Tool result — show as indented output
     return (
       <div className="pl-6 py-0.5 animate-fade-in">
         <div className={`text-[10px] leading-relaxed truncate ${parsed.isError ? 'text-c-red' : 'text-c-dim'}`}>
-          {parsed.isError && <span className="text-c-red font-semibold mr-1">ERR</span>}
+          {parsed.isError && <span className="text-c-red font-medium mr-1">ERR</span>}
           {parsed.summary}
         </div>
       </div>
@@ -239,16 +234,16 @@ function ToolCallCard({ content, ts }: { content: string; ts: number }) {
   const borderColor = getToolBorderColor(parsed.toolName);
 
   return (
-    <div className={`border ${borderColor} bg-c-surface/50 backdrop-blur-xs animate-fade-in`}>
+    <div className={`border ${borderColor} bg-c-surface/50 animate-fade-in`}>
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-c-hover/50 transition-colors group"
       >
         {expanded ? <ChevronDown size={9} className="text-c-muted shrink-0" /> : <ChevronRight size={9} className="text-c-muted shrink-0" />}
-        <span className={`text-[10px] font-semibold uppercase tracking-[0.06em] shrink-0 ${color}`}>
+        <span className={`text-[10px] font-medium uppercase tracking-[0.06em] shrink-0 ${color}`}>
           {parsed.toolName}
         </span>
-        <span className="text-c-dim text-[10px] mr-1">→</span>
+        <span className="text-c-muted text-[10px] mr-1">{'\u2192'}</span>
         <span className="text-c-dim text-[10px] truncate flex-1 group-hover:text-c-text transition-colors">
           {parsed.summary}
         </span>
@@ -279,7 +274,7 @@ function UserMessage({ content, ts }: { content: string; ts: number }) {
       onMouseLeave={() => setShowTime(false)}
     >
       <div className="flex items-start gap-2">
-        <span className="text-c-green font-bold shrink-0 text-[11px] mt-px glow-text">{'>'}</span>
+        <span className="text-c-accent font-medium shrink-0 text-[11px] mt-px">{'>'}</span>
         <div className="flex-1 min-w-0">
           <span className="text-c-text text-[12px] whitespace-pre-wrap break-words">{content}</span>
         </div>
@@ -304,11 +299,11 @@ function AssistantMessage({ content, ts, isStreaming }: { content: string; ts: n
       onMouseLeave={() => setShowTime(false)}
     >
       <div className="flex gap-2">
-        <div className="w-0.5 shrink-0 rounded-full bg-gradient-to-b from-c-green/40 via-c-green/15 to-transparent mt-0.5" style={{ minHeight: 16 }} />
+        <div className="w-px shrink-0 bg-c-accent/30 mt-0.5" style={{ minHeight: 16 }} />
         <div className="flex-1 min-w-0 py-px">
           {rendered}
           {isStreaming && (
-            <span className="inline-block w-1.5 h-3.5 bg-c-green ml-0.5 align-middle animate-blink" style={{ boxShadow: '0 0 6px rgba(57,255,20,0.4)' }} />
+            <span className="inline-block w-1.5 h-3.5 bg-c-accent ml-0.5 align-middle animate-blink" />
           )}
         </div>
         <span className={`text-[9px] text-c-muted shrink-0 transition-opacity duration-200 pt-0.5 ${showTime ? 'opacity-100' : 'opacity-0'}`}>
@@ -402,7 +397,6 @@ export function ChatPanel({ messages, onSend, isRunning }: Props) {
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
       if (msg.role === 'tool') {
-        // Try to add to existing tool group
         const last = groups[groups.length - 1];
         if (last && last.type === 'tools') {
           last.messages.push(msg);
@@ -422,16 +416,16 @@ export function ChatPanel({ messages, onSend, isRunning }: Props) {
     <div className="h-full flex flex-col bg-c-panel overflow-hidden">
       {/* Header */}
       <div className="flex justify-between items-center px-3 py-1.5 border-b border-c-border shrink-0">
-        <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-c-dim glow-text flex items-center gap-1.5">
-          <MessageSquare size={12} className="text-c-green" />
+        <span className="text-[10px] font-medium tracking-[0.15em] uppercase text-c-dim flex items-center gap-1.5">
+          <MessageSquare size={11} className="text-c-accent" />
           Terminal
         </span>
         <div className="flex items-center gap-3 text-[9px]">
           <span className="text-c-muted">{stats.total} msg</span>
           {stats.toolCount > 0 && <span className="text-c-cyan">{stats.toolCount} ops</span>}
           {isRunning ? (
-            <span className="text-c-amber font-semibold uppercase tracking-wider flex items-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-c-amber animate-pulse-live" />
+            <span className="text-c-amber font-medium uppercase tracking-wider flex items-center gap-1">
+              <span className="w-1 h-1 bg-c-amber animate-pulse-live" />
               Processing
             </span>
           ) : (
@@ -486,7 +480,7 @@ export function ChatPanel({ messages, onSend, isRunning }: Props) {
         <div className="absolute right-6 bottom-20 z-10">
           <button
             onClick={scrollToBottom}
-            className="flex items-center gap-1 px-2 py-1 text-[9px] bg-c-surface border border-c-border text-c-muted hover:text-c-green hover:border-c-green/30 transition-colors uppercase tracking-wider"
+            className="flex items-center gap-1 px-2 py-1 text-[9px] bg-c-surface border border-c-border text-c-muted hover:text-c-accent hover:border-c-accent/30 transition-colors uppercase tracking-wider"
             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
           >
             <ArrowDown size={10} />
@@ -498,17 +492,17 @@ export function ChatPanel({ messages, onSend, isRunning }: Props) {
       {/* Input area */}
       <div className="px-3 py-2 border-t border-c-border shrink-0">
         <div className="flex items-end gap-2">
-          <span className="text-c-green font-bold text-[11px] shrink-0 pb-0.5 glow-text">specter {'>'}</span>
+          <span className="text-c-accent font-medium text-[11px] shrink-0 pb-0.5">specter {'>'}</span>
           <textarea
             ref={textareaRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isRunning ? 'Agent is working...' : 'Type a message... (Shift+Enter for newline)'}
+            placeholder={isRunning ? 'Agent is working...' : 'Type a message...'}
             disabled={isRunning}
             rows={1}
             className="flex-1 bg-transparent border-none outline-none text-c-text font-mono text-[12px] placeholder:text-c-muted disabled:opacity-30 resize-none leading-relaxed"
-            style={{ caretColor: 'var(--color-c-green)', minHeight: 20, maxHeight: 120 }}
+            style={{ caretColor: 'var(--color-c-accent)', minHeight: 20, maxHeight: 120 }}
             autoFocus
           />
           <div className="flex items-center gap-1.5 pb-0.5">
@@ -522,7 +516,7 @@ export function ChatPanel({ messages, onSend, isRunning }: Props) {
                 isRunning
                   ? 'text-c-red hover:text-c-red/80 cursor-pointer'
                   : input.trim()
-                    ? 'text-c-green hover:text-c-green/80 cursor-pointer'
+                    ? 'text-c-accent hover:text-c-accent/80 cursor-pointer'
                     : 'text-c-muted/30 cursor-not-allowed'
               }`}
               title={isRunning ? 'Stop' : 'Send'}

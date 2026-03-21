@@ -43,9 +43,9 @@ export function MemoryPanel({ onSave, onLoad, memoryContent }: Props) {
           <button
             key={file}
             onClick={() => setActiveFile(file)}
-            className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors ${
+            className={`px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.1em] transition-colors ${
               activeFile === file
-                ? 'text-c-green border-b-2 border-c-green bg-c-green/5'
+                ? 'text-c-accent border-b border-c-accent bg-c-accent/5'
                 : 'text-c-muted hover:text-c-dim'
             }`}
           >
@@ -58,8 +58,8 @@ export function MemoryPanel({ onSave, onLoad, memoryContent }: Props) {
       <textarea
         value={content}
         onChange={e => { setContent(e.target.value); setDirty(true); }}
-        className="w-full bg-c-surface border border-c-border p-3 text-c-text font-mono text-xs resize-none outline-none focus:border-c-green/30"
-        style={{ caretColor: 'var(--color-c-green)', minHeight: 'calc(100vh - 200px)', flex: '1 1 0' }}
+        className="w-full bg-c-surface border border-c-border p-3 text-c-text font-mono text-xs resize-none outline-none focus:border-c-accent/25"
+        style={{ caretColor: 'var(--color-c-accent)', minHeight: 'calc(100vh - 200px)', flex: '1 1 0' }}
         spellCheck={false}
       />
 
@@ -68,7 +68,7 @@ export function MemoryPanel({ onSave, onLoad, memoryContent }: Props) {
         <button
           onClick={handleSave}
           disabled={!dirty}
-          className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] border transition-colors disabled:opacity-30 disabled:cursor-not-allowed border-c-green text-c-green bg-c-green/10 hover:bg-c-green/15"
+          className="px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.15em] border transition-colors disabled:opacity-30 disabled:cursor-not-allowed border-c-accent text-c-accent bg-c-accent/5 hover:bg-c-accent/10"
         >
           Save
         </button>

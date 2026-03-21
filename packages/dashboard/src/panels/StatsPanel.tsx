@@ -17,7 +17,6 @@ function formatUptime(ms: number): string {
 }
 
 function estimateCost(input: number, output: number): string {
-  // Rough Claude Sonnet pricing: $3/M input, $15/M output
   const cost = (input * 3 + output * 15) / 1_000_000;
   return cost < 0.01 ? '<$0.01' : `$${cost.toFixed(2)}`;
 }
