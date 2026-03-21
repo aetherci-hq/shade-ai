@@ -1,5 +1,6 @@
 import { resolve } from 'path';
-import { loadConfig, Agent, HeartbeatDaemon, eventBus } from '@specter/core';
+import { loadConfig, Agent, HeartbeatDaemon, setMemoryStore, eventBus } from '@specter/core';
+import { initMemory } from '@specter/memory';
 import { createServer } from './http.js';
 
 const BASE_DIR = resolve(process.cwd());
@@ -14,13 +15,18 @@ async function main() {
     console.log(`[specter] Budget cap: $${config.agent.maxBudgetUsd}`);
   }
 
-  // 2. Create agent (now wraps Claude Agent SDK)
+  // 2. Initialize persistent memory
+  const memoryStore = await initMemory();
+  setMemoryStore(memoryStore);
+  console.log(`[specter] Memory initialized (auto-capture: ${config.memory.autoCapture})`);
+
+  // 3. Create agent (now wraps Claude Agent SDK)
   const agent = new Agent();
 
-  // 3. Create heartbeat daemon
+  // 4. Create heartbeat daemon
   const heartbeat = new HeartbeatDaemon(agent);
 
-  // 4. Start HTTP + WebSocket server
+  // 5. Start HTTP + WebSocket server
   const server = await createServer(agent, heartbeat, config);
 
   // 5. Start heartbeat
@@ -53,6 +59,7 @@ async function main() {
     console.log('\n[specter] Shutting down...');
     heartbeat.stop();
     agent.abort();
+    memoryStore.close();
     server.close();
     process.exit(0);
   };

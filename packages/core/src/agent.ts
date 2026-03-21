@@ -2,6 +2,29 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import { eventBus } from './events.js';
 import { readMemory, appendActivity } from './memory.js';
 import { getConfig } from './config.js';
+import type { ScoredMemory } from './memory-types.js';
+
+// Optional memory store — set via setMemoryStore() from server init
+let memoryStore: MemoryStoreLike | null = null;
+
+interface MemoryStoreLike {
+  search(query: string, opts?: { limit?: number }): Promise<ScoredMemory[]>;
+  remember(content: string, tags?: string[], importance?: number): Promise<string>;
+}
+
+export function setMemoryStore(store: MemoryStoreLike): void {
+  memoryStore = store;
+}
+
+function formatRecalledMemories(memories: ScoredMemory[]): string {
+  if (memories.length === 0) return '';
+  const lines = memories.map(m => {
+    const date = new Date(m.createdAt).toISOString().split('T')[0];
+    const typeLabel = m.type === 'agent' ? ' [remembered]' : '';
+    return `- [${date}]${typeLabel} ${m.content.slice(0, 300)}`;
+  });
+  return '\n\n## Recalled Memories\nThe following are automatically retrieved from your long-term memory based on relevance to the current conversation:\n' + lines.join('\n');
+}
 
 export class Agent {
   private running = false;
@@ -24,9 +47,26 @@ export class Agent {
     this.abortController = new AbortController();
 
     const soul = readMemory('SOUL');
+    const manualMemory = readMemory('MEMORY');
+
+    // Build system prompt with memory context
+    let systemPrompt = soul;
+    if (manualMemory.trim()) {
+      systemPrompt += '\n\n## Notes\n' + manualMemory;
+    }
+
+    // Auto-inject relevant memories from persistent store
+    if (memoryStore) {
+      try {
+        const relevant = await memoryStore.search(input, { limit: config.memory.contextLimit });
+        systemPrompt += formatRecalledMemories(relevant);
+      } catch (err) {
+        console.error('[memory] Context injection error:', err);
+      }
+    }
 
     try {
-      return await this.executeQuery(input, convId, soul, config, false);
+      return await this.executeQuery(input, convId, systemPrompt, config, false);
     } finally {
       this.running = false;
     }
