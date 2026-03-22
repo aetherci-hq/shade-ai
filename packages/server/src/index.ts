@@ -2,6 +2,7 @@ import { resolve } from 'path';
 import { loadConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, eventBus } from '@specter/core';
 import { initMemory } from '@specter/memory';
 import { createServer } from './http.js';
+import { startTranscriptCapture } from './transcripts.js';
 
 const BASE_DIR = resolve(process.cwd());
 
@@ -24,7 +25,10 @@ async function main() {
   setMemoryStore(memoryStore);
   console.log(`[specter] Memory initialized (auto-capture: ${config.memory.autoCapture})`);
 
-  // 4. Create agent (now wraps Claude Agent SDK)
+  // 4. Start transcript capture
+  startTranscriptCapture();
+
+  // 5. Create agent (now wraps Claude Agent SDK)
   const agent = new Agent();
 
   // 5. Create heartbeat daemon

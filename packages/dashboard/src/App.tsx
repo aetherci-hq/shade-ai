@@ -38,9 +38,10 @@ export function App() {
   const [view, setView] = useState<View>('activity');
   const [memoryContent, setMemoryContent] = useState<Record<string, string>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [conversationId] = useState(() => `chat-${Date.now()}`);
+  const [conversationId, setConversationId] = useState(() => `chat-${Date.now()}`);
   const lastProcessedRef = useRef(0);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [chatLoaded, setChatLoaded] = useState(false);
 
   // Track streaming assistant message
   const streamingRef = useRef<{ ts: number; content: string } | null>(null);
@@ -52,6 +53,35 @@ export function App() {
       .then(setAppConfig)
       .catch(() => {});
   }, []);
+
+  // Resume last chat conversation on mount
+  useEffect(() => {
+    if (chatLoaded) return;
+    fetch('/api/conversations?limit=10')
+      .then(r => r.json())
+      .then((conversations: Array<{ id: string; messageCount: number; lastActivity: number }>) => {
+        // Find the most recent non-heartbeat chat conversation
+        const lastChat = conversations.find(c => c.id.startsWith('chat-'));
+        if (!lastChat) { setChatLoaded(true); return; }
+
+        return fetch(`/api/conversations/${lastChat.id}`)
+          .then(r => r.json())
+          .then((data: { id: string; messages: Array<{ role: string; content: string; ts: number; type?: string }> }) => {
+            const restored: ChatMessage[] = [];
+            for (const msg of data.messages) {
+              if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'tool') {
+                restored.push({ role: msg.role, content: msg.content, ts: msg.ts });
+              }
+            }
+            if (restored.length > 0) {
+              setChatMessages(restored);
+              setConversationId(data.id);
+            }
+            setChatLoaded(true);
+          });
+      })
+      .catch(() => { setChatLoaded(true); });
+  }, [chatLoaded]);
 
   const agentName = appConfig?.name ?? 'Specter';
 
