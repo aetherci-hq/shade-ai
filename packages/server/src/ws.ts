@@ -9,6 +9,17 @@ const clients = new Set<WebSocket>();
 export function setupWebSocket(app: FastifyInstance, agent: Agent, heartbeat: HeartbeatDaemon) {
   // Broadcast all core events to connected clients
   eventBus.onAny((event, data) => {
+    // Voice audio chunks sent as binary frames (handled separately)
+    if (event === 'voice:audio') {
+      const chunk = (data as { chunk: Buffer }).chunk;
+      for (const ws of clients) {
+        if (ws.readyState === 1) {
+          ws.send(chunk, { binary: true });
+        }
+      }
+      return;
+    }
+
     const message = JSON.stringify({ type: event, ts: Date.now(), data });
     for (const ws of clients) {
       if (ws.readyState === 1) { // OPEN

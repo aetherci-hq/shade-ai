@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Activity, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, HeartPulse, Fingerprint } from 'lucide-react';
+import { Activity, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, HeartPulse, Fingerprint, Volume2, VolumeX } from 'lucide-react';
 import type { AgentState } from '../hooks/useAgent';
 
 export type View = 'activity' | 'chat' | 'heartbeat' | 'persona' | 'memory' | 'tools' | 'config';
@@ -16,6 +16,10 @@ interface ShellProps {
   startTime: number;
   agentName: string;
   modelName: string;
+  focusMode: boolean;
+  onFocusModeToggle: (v: boolean) => void;
+  focusChatPanel: ReactNode;
+  voice: { muted: boolean; speaking: boolean; toggleMute: () => void };
 }
 
 const NAV_ITEMS: { id: View; label: string; icon: typeof Activity }[] = [
@@ -50,7 +54,7 @@ function formatUptime(ms: number): string {
   return `${s}s`;
 }
 
-export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime, agentName, modelName }: ShellProps) {
+export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime, agentName, modelName, focusMode, onFocusModeToggle, focusChatPanel, voice }: ShellProps) {
   const [clock, setClock] = useState(new Date());
   const [sessionCost, setSessionCost] = useState(0);
   const costFetchRef = useRef(0);
@@ -72,6 +76,16 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
     const timer = setInterval(load, 10000);
     return () => clearInterval(timer);
   }, []);
+
+  // Escape key exits focus mode
+  useEffect(() => {
+    if (!focusMode) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onFocusModeToggle(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [focusMode, onFocusModeToggle]);
 
   const uptime = Date.now() - startTime;
 
@@ -168,10 +182,31 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
         <span className="text-c-muted">{agent.toolCalls} calls</span>
         <span className="text-c-border">|</span>
         <span className="text-c-amber">{sessionCost < 0.01 && sessionCost > 0 ? '<$0.01' : `$${sessionCost.toFixed(2)}`}</span>
+        <span className="text-c-border">|</span>
+        <button
+          onClick={voice.toggleMute}
+          className={`flex items-center gap-1 transition-colors ${voice.speaking ? 'text-c-accent' : voice.muted ? 'text-c-muted/50' : 'text-c-muted'}`}
+          title={voice.muted ? 'Unmute voice' : 'Mute voice'}
+        >
+          {voice.muted ? <VolumeX size={11} /> : <Volume2 size={11} className={voice.speaking ? 'animate-pulse-live' : ''} />}
+        </button>
         <div className="ml-auto text-c-muted">
           {clock.toLocaleTimeString('en-US', { hour12: false })}
         </div>
       </footer>
+
+      {/* Focus Mode Overlay */}
+      {focusMode && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-c-bg">
+          <div className="h-px w-full bg-c-accent opacity-30 shrink-0" />
+          <div className="flex-1 min-h-0 max-w-4xl w-full mx-auto flex flex-col">
+            {focusChatPanel}
+          </div>
+          <div className="h-6 shrink-0 bg-c-bg border-t border-c-border flex items-center justify-center px-3 text-[10px] text-c-muted">
+            <span className="opacity-50">Press <span className="text-c-accent">Esc</span> to exit focus mode</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

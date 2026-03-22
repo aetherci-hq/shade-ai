@@ -87,3 +87,22 @@ body {
 .glow-text-strong {
   text-shadow: 0 0 12px rgba(191, 149, 107, 0.25);
 }
+
+/* Config form inputs */
+.cfg-input {
+  background: var(--color-c-bg);
+  border: 1px solid var(--color-c-border);
+  color: var(--color-c-text);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cfg-input:focus {
+  border-color: var(--color-c-accent);
+}
+.cfg-input option {
+  background: var(--color-c-panel);
+  color: var(--color-c-text);
+}

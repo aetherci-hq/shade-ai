@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Send, Square, ChevronDown, ChevronRight, ArrowDown, MessageSquare } from 'lucide-react';
+import { Send, Square, ChevronDown, ChevronRight, ArrowDown, MessageSquare, Maximize2, Minimize2, SquarePen } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -12,8 +12,11 @@ interface ChatMessage {
 interface Props {
   messages: ChatMessage[];
   onSend: (message: string) => void;
+  onNewChat?: () => void;
   isRunning: boolean;
   agentName: string;
+  focusMode?: boolean;
+  onFocusToggle?: () => void;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -320,7 +323,7 @@ function AssistantMessage({ content, ts, isStreaming, agentName }: { content: st
 
 // ─── Main Component ─────────────────────────────────────────────────
 
-export function ChatPanel({ messages, onSend, isRunning, agentName }: Props) {
+export function ChatPanel({ messages, onSend, onNewChat, isRunning, agentName, focusMode, onFocusToggle }: Props) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -434,6 +437,24 @@ export function ChatPanel({ messages, onSend, isRunning, agentName }: Props) {
             </span>
           ) : (
             <span className="text-c-green font-medium uppercase tracking-wider">Ready</span>
+          )}
+          {onNewChat && messages.length > 0 && !isRunning && (
+            <button
+              onClick={onNewChat}
+              className="text-c-muted hover:text-c-accent transition-colors p-0.5"
+              title="New chat"
+            >
+              <SquarePen size={12} />
+            </button>
+          )}
+          {onFocusToggle && (
+            <button
+              onClick={onFocusToggle}
+              className="text-c-muted hover:text-c-accent transition-colors p-0.5"
+              title={focusMode ? 'Exit focus mode (Esc)' : 'Focus mode'}
+            >
+              {focusMode ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+            </button>
           )}
         </div>
       </div>

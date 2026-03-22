@@ -1,8 +1,9 @@
 import { resolve } from 'path';
-import { loadConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, eventBus } from '@specter/core';
+import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, eventBus } from '@specter/core';
 import { initMemory } from '@specter/memory';
 import { createServer } from './http.js';
 import { startTranscriptCapture } from './transcripts.js';
+import { initVoice } from '@specter/voice';
 
 const BASE_DIR = resolve(process.cwd());
 
@@ -28,7 +29,13 @@ async function main() {
   // 4. Start transcript capture
   startTranscriptCapture();
 
-  // 5. Create agent (now wraps Claude Agent SDK)
+  // 5. Initialize voice engine
+  const voiceEngine = initVoice();
+  if (voiceEngine) {
+    console.log(`[specter] Voice enabled (ElevenLabs)`);
+  }
+
+  // 6. Create agent (now wraps Claude Agent SDK)
   const agent = new Agent();
 
   // 5. Create heartbeat daemon
@@ -42,6 +49,19 @@ async function main() {
     heartbeat.start();
     console.log(`[specter] Heartbeat enabled (every ${config.heartbeat.intervalMinutes}m)`);
   }
+
+  // 8. Hot-reload: apply config changes to running components
+  eventBus.on('config:updated', ({ fields }) => {
+    const cfg = getConfig();
+    console.log(`[specter] Config updated: ${fields.join(', ')}`);
+
+    // Hot-reload heartbeat settings
+    if (fields.includes('heartbeat')) {
+      heartbeat.updateInterval(cfg.heartbeat.intervalMinutes * 60 * 1000);
+      heartbeat.toggle(cfg.heartbeat.enabled);
+      console.log(`[specter] Heartbeat reloaded (enabled=${cfg.heartbeat.enabled}, interval=${cfg.heartbeat.intervalMinutes}m)`);
+    }
+  });
 
   // Log events to terminal
   eventBus.onAny((event, data) => {
@@ -66,6 +86,7 @@ async function main() {
   const shutdown = () => {
     console.log('\n[specter] Shutting down...');
     flushUsage();
+    voiceEngine?.stop();
     heartbeat.stop();
     agent.abort();
     memoryStore.close();
