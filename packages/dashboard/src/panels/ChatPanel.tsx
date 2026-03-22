@@ -274,14 +274,14 @@ function UserMessage({ content, ts }: { content: string; ts: number }) {
       onMouseEnter={() => setShowTime(true)}
       onMouseLeave={() => setShowTime(false)}
     >
-      <div className="flex items-start gap-2">
-        <span className="text-c-accent font-medium shrink-0 text-[11px] mt-px">{'>'}</span>
-        <div className="flex-1 min-w-0">
-          <span className="text-c-text text-[12px] whitespace-pre-wrap break-words">{content}</span>
+      <div className="bg-c-accent/[0.04] border border-c-accent/15 px-3 py-2">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-c-accent">You</span>
+          <span className={`text-[9px] text-c-muted transition-opacity duration-200 ${showTime ? 'opacity-100' : 'opacity-0'}`}>
+            {formatTime(ts)}
+          </span>
         </div>
-        <span className={`text-[9px] text-c-muted shrink-0 transition-opacity duration-200 ${showTime ? 'opacity-100' : 'opacity-0'}`}>
-          {formatTime(ts)}
-        </span>
+        <div className="text-c-text text-[12px] whitespace-pre-wrap break-words leading-relaxed">{content}</div>
       </div>
     </div>
   );
@@ -289,7 +289,7 @@ function UserMessage({ content, ts }: { content: string; ts: number }) {
 
 // ─── Assistant Message ──────────────────────────────────────────────
 
-function AssistantMessage({ content, ts, isStreaming }: { content: string; ts: number; isStreaming: boolean }) {
+function AssistantMessage({ content, ts, isStreaming, agentName }: { content: string; ts: number; isStreaming: boolean; agentName: string }) {
   const [showTime, setShowTime] = useState(false);
   const rendered = useMemo(() => renderMarkdown(content), [content]);
 
@@ -299,17 +299,20 @@ function AssistantMessage({ content, ts, isStreaming }: { content: string; ts: n
       onMouseEnter={() => setShowTime(true)}
       onMouseLeave={() => setShowTime(false)}
     >
-      <div className="flex gap-2">
-        <div className="w-px shrink-0 bg-c-accent/30 mt-0.5" style={{ minHeight: 16 }} />
-        <div className="flex-1 min-w-0 py-px">
+      <div className="bg-c-surface/60 border-l-2 border-c-cyan/30 px-3 py-2">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-c-cyan">{agentName}</span>
+          {isStreaming && <span className="w-1 h-1 bg-c-amber animate-pulse-live" />}
+          <span className={`text-[9px] text-c-muted transition-opacity duration-200 ${showTime ? 'opacity-100' : 'opacity-0'}`}>
+            {formatTime(ts)}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
           {rendered}
           {isStreaming && (
             <span className="inline-block w-1.5 h-3.5 bg-c-accent ml-0.5 align-middle animate-blink" />
           )}
         </div>
-        <span className={`text-[9px] text-c-muted shrink-0 transition-opacity duration-200 pt-0.5 ${showTime ? 'opacity-100' : 'opacity-0'}`}>
-          {formatTime(ts)}
-        </span>
       </div>
     </div>
   );
@@ -448,7 +451,7 @@ export function ChatPanel({ messages, onSend, isRunning, agentName }: Props) {
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {groupedMessages.map(group => {
             if (group.type === 'user') {
               return <UserMessage key={group.key} content={group.messages[0].content} ts={group.messages[0].ts} />;
@@ -459,12 +462,12 @@ export function ChatPanel({ messages, onSend, isRunning, agentName }: Props) {
               const idx = messages.indexOf(msg);
               const isLast = idx === lastAssistantIndex;
               const isStreaming = isLast && isRunning;
-              return <AssistantMessage key={group.key} content={msg.content} ts={msg.ts} isStreaming={isStreaming} />;
+              return <AssistantMessage key={group.key} content={msg.content} ts={msg.ts} isStreaming={isStreaming} agentName={agentName} />;
             }
 
             // Tool group
             return (
-              <div key={group.key} className="space-y-px ml-2">
+              <div key={group.key} className="space-y-px ml-4 opacity-70 hover:opacity-100 transition-opacity">
                 {group.messages.map((msg, j) => (
                   <ToolCallCard key={`${msg.ts}-${j}`} content={msg.content} ts={msg.ts} />
                 ))}
