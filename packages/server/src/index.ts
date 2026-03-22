@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, eventBus } from '@specter/core';
+import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, initKeys, eventBus } from '@specter/core';
 import { initMemory } from '@specter/memory';
 import { createServer } from './http.js';
 import { startTranscriptCapture } from './transcripts.js';
@@ -17,7 +17,10 @@ async function main() {
     console.log(`[specter] Budget cap: $${config.agent.maxBudgetUsd}`);
   }
 
-  // 2. Initialize persistent usage tracker
+  // 2. Initialize key management
+  initKeys(BASE_DIR);
+
+  // 3. Initialize persistent usage tracker
   initUsageTracker();
   console.log(`[specter] Usage tracker initialized (~/.specter/usage.json)`);
 

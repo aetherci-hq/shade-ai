@@ -51,6 +51,16 @@ tools:
     - Agent
   disallowed: []
   userDir: tools
+voice:
+  enabled: false
+  provider: elevenlabs
+  apiKey: ""
+  voiceId: OYRGNLISJdGGRcZArrNH
+  model: eleven_turbo_v2_5
+  triggers:
+    - responses
+  maxCharsPerHour: 5000
+  maxCostPerDay: 1
 guardrails:
   blockedCommands:
     - rm -rf /

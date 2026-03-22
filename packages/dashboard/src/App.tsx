@@ -234,11 +234,11 @@ export function App() {
       onFocusModeToggle={setFocusMode}
       voice={voice}
       focusChatPanel={
-        <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} />
+        <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} />
       }
     >
       {view === 'activity' && <ActivityPanel events={events} />}
-      {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} />}
+      {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} />}
       {view === 'heartbeat' && (
         <HeartbeatPanel
           agent={agent}
