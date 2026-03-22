@@ -7,7 +7,7 @@ import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { readdirSync, readFileSync } from 'fs';
 import type { Agent, HeartbeatDaemon, SpecterConfig } from '@specter/core';
-import { readMemory, writeMemory, readActivity, eventBus, getConfig, getUsageSummary } from '@specter/core';
+import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, getUsageSummary } from '@specter/core';
 import { getMemoryStore } from '@specter/memory';
 import { setupWebSocket } from './ws.js';
 
@@ -160,6 +160,21 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
       return reply.code(404).send({ error: 'File not found' });
     }
     return { filename: req.params.filename, content: readFileSync(filePath, 'utf-8') };
+  });
+
+  // Conversations / transcripts
+  app.get<{ Querystring: { limit?: string } }>('/api/conversations', async (req) => {
+    const limit = parseInt(req.query.limit ?? '50', 10);
+    const conversations = listConversations();
+    return conversations.slice(0, limit);
+  });
+
+  app.get<{ Params: { id: string } }>('/api/conversations/:id', async (req, reply) => {
+    const transcript = readTranscript(req.params.id);
+    if (transcript.length === 0) {
+      return reply.code(404).send({ error: 'Conversation not found' });
+    }
+    return { id: req.params.id, messages: transcript };
   });
 
   // Persistent usage stats

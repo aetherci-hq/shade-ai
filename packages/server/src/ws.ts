@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import type { Agent, HeartbeatDaemon } from '@specter/core';
 import { eventBus, readMemory, writeMemory } from '@specter/core';
+import { recordUserMessage } from './transcripts.js';
 
 const clients = new Set<WebSocket>();
 
@@ -64,6 +65,10 @@ async function handleClientMessage(
       const message = msg.data?.['message'] as string;
       const conversationId = msg.data?.['conversationId'] as string | undefined;
       if (message) {
+        // Persist user message to transcript
+        if (conversationId) {
+          recordUserMessage(conversationId, message);
+        }
         // Run async — events will stream to client via broadcast
         agent.run(message, conversationId).catch((err) => {
           eventBus.emit('agent:error', {

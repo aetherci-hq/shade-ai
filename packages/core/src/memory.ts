@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { resolve, dirname, basename } from 'path';
 import { getConfig } from './config.js';
 import { eventBus } from './events.js';
 
@@ -59,4 +59,46 @@ export function readTranscript(conversationId: string): Record<string, unknown>[
   const path = resolve(config.memory.stateDir, 'transcripts', `${conversationId}.jsonl`);
   if (!existsSync(path)) return [];
   return readFileSync(path, 'utf-8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+}
+
+export interface ConversationInfo {
+  id: string;
+  messageCount: number;
+  lastActivity: number;
+  firstActivity: number;
+}
+
+export function listConversations(): ConversationInfo[] {
+  const config = getConfig();
+  const dir = resolve(config.memory.stateDir, 'transcripts');
+  if (!existsSync(dir)) return [];
+
+  const files = readdirSync(dir).filter(f => f.endsWith('.jsonl'));
+  const conversations: ConversationInfo[] = [];
+
+  for (const file of files) {
+    const filePath = resolve(dir, file);
+    const id = basename(file, '.jsonl');
+
+    try {
+      const content = readFileSync(filePath, 'utf-8').trim();
+      if (!content) continue;
+      const lines = content.split('\n').filter(Boolean);
+      const first = JSON.parse(lines[0]);
+      const last = JSON.parse(lines[lines.length - 1]);
+
+      conversations.push({
+        id,
+        messageCount: lines.length,
+        firstActivity: first.ts ?? statSync(filePath).birthtimeMs,
+        lastActivity: last.ts ?? statSync(filePath).mtimeMs,
+      });
+    } catch {
+      continue;
+    }
+  }
+
+  // Sort by most recent first
+  conversations.sort((a, b) => b.lastActivity - a.lastActivity);
+  return conversations;
 }
