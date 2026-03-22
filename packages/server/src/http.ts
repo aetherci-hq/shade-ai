@@ -7,7 +7,7 @@ import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { readdirSync, readFileSync } from 'fs';
 import type { Agent, HeartbeatDaemon, SpecterConfig } from '@specter/core';
-import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, updateConfig, getUsageSummary } from '@specter/core';
+import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, updateConfig, getUsageSummary, getKeyStatuses, setKeys } from '@specter/core';
 import { getMemoryStore } from '@specter/memory';
 import { setupWebSocket } from './ws.js';
 
@@ -31,6 +31,22 @@ function formatConfigResponse(cfg: SpecterConfig) {
     },
     heartbeat: cfg.heartbeat,
     tools: { allowed: cfg.tools.allowed, disallowed: cfg.tools.disallowed },
+    voice: {
+      enabled: cfg.voice.enabled,
+      provider: cfg.voice.provider,
+      voiceId: cfg.voice.voiceId,
+      model: cfg.voice.model,
+      triggers: cfg.voice.triggers,
+      maxCharsPerHour: cfg.voice.maxCharsPerHour,
+      maxCostPerDay: cfg.voice.maxCostPerDay,
+      // apiKey deliberately omitted — use /api/keys for key management
+    },
+    memory: {
+      autoCapture: cfg.memory.autoCapture,
+      maxEntries: cfg.memory.maxEntries,
+      contextLimit: cfg.memory.contextLimit,
+      embedModel: cfg.memory.embedModel,
+    },
   };
 }
 
@@ -111,11 +127,31 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
 
   app.put<{ Body: Record<string, unknown> }>('/api/config', async (req) => {
     const partial = req.body;
-    // Prevent runtime changes to server binding and memory paths
+    // Prevent runtime changes to server binding
     delete partial['server'];
-    delete partial['memory'];
+    // Protect memory paths but allow feature flags
+    if (partial['memory']) {
+      const mem = partial['memory'] as Record<string, unknown>;
+      delete mem['dir'];
+      delete mem['stateDir'];
+    }
+    // Strip apiKey from voice updates — use /api/keys instead
+    if (partial['voice']) {
+      const voice = partial['voice'] as Record<string, unknown>;
+      delete voice['apiKey'];
+    }
     const updated = updateConfig(partial);
     return formatConfigResponse(updated);
+  });
+
+  // API key management
+  app.get('/api/keys', async () => {
+    return getKeyStatuses();
+  });
+
+  app.put<{ Body: Record<string, string> }>('/api/keys', async (req) => {
+    setKeys(req.body);
+    return getKeyStatuses();
   });
 
   app.get('/api/tools', async () => {

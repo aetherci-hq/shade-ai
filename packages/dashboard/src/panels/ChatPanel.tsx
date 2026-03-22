@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Send, Square, ChevronDown, ChevronRight, ArrowDown, MessageSquare, Maximize2, Minimize2, SquarePen } from 'lucide-react';
+import { Send, Square, ChevronDown, ChevronRight, ArrowDown, MessageSquare, Maximize2, Minimize2, SquarePen, Volume2, VolumeX } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -17,6 +17,7 @@ interface Props {
   agentName: string;
   focusMode?: boolean;
   onFocusToggle?: () => void;
+  voice?: { muted: boolean; speaking: boolean; toggleMute: () => void };
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -323,7 +324,7 @@ function AssistantMessage({ content, ts, isStreaming, agentName }: { content: st
 
 // ─── Main Component ─────────────────────────────────────────────────
 
-export function ChatPanel({ messages, onSend, onNewChat, isRunning, agentName, focusMode, onFocusToggle }: Props) {
+export function ChatPanel({ messages, onSend, onNewChat, isRunning, agentName, focusMode, onFocusToggle, voice }: Props) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -437,6 +438,15 @@ export function ChatPanel({ messages, onSend, onNewChat, isRunning, agentName, f
             </span>
           ) : (
             <span className="text-c-green font-medium uppercase tracking-wider">Ready</span>
+          )}
+          {voice && (
+            <button
+              onClick={voice.toggleMute}
+              className={`transition-colors p-0.5 ${voice.speaking ? 'text-c-accent' : voice.muted ? 'text-c-muted/40' : 'text-c-muted hover:text-c-accent'}`}
+              title={voice.muted ? 'Unmute voice' : 'Mute voice'}
+            >
+              {voice.muted ? <VolumeX size={12} /> : <Volume2 size={12} className={voice.speaking ? 'animate-pulse-live' : ''} />}
+            </button>
           )}
           {onNewChat && messages.length > 0 && !isRunning && (
             <button

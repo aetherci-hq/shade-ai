@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Panel } from '../components/Panel';
-import { Save, RotateCcw, Check, AlertTriangle, Plus, Copy, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Save, RotateCcw, Check, AlertTriangle, Plus, Copy, Trash2, ChevronDown, ChevronRight, Eye, EyeOff, Key } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -23,6 +23,29 @@ interface ConfigData {
   };
   heartbeat: { enabled: boolean; intervalMinutes: number };
   tools: { allowed: string[]; disallowed: string[] };
+  voice: {
+    enabled: boolean;
+    provider: string;
+    voiceId: string;
+    model: string;
+    triggers: string[];
+    maxCharsPerHour: number;
+    maxCostPerDay: number;
+  };
+  memory: {
+    autoCapture: boolean;
+    maxEntries: number;
+    contextLimit: number;
+    embedModel: string;
+  };
+}
+
+interface KeyStatus {
+  key: string;
+  set: boolean;
+  masked: string;
+  label: string;
+  group: string;
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -46,12 +69,19 @@ const PERMISSION_MODES = ['default', 'acceptEdits', 'bypassPermissions', 'plan']
 
 const ALL_TOOLS = ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Agent'];
 
+const VOICE_TRIGGERS = ['responses', 'heartbeat', 'errors'];
+const VOICE_MODELS = ['eleven_turbo_v2_5', 'eleven_multilingual_v2', 'eleven_monolingual_v1'];
+
 // ─── Main Component ─────────────────────────────────────────────────
 
 export function ConfigPanel() {
   const [config, setConfig] = useState<ConfigData | null>(null);
   const [draft, setDraft] = useState<ConfigData | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [keys, setKeys] = useState<KeyStatus[]>([]);
+  const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
+  const [showKeyValues, setShowKeyValues] = useState<Record<string, boolean>>({});
+  const [keySaving, setKeySaving] = useState(false);
 
   useEffect(() => {
     fetch('/api/config')
@@ -61,6 +91,10 @@ export function ConfigPanel() {
         setDraft(data);
       })
       .catch(() => setConfig(null));
+    fetch('/api/keys')
+      .then(r => r.json())
+      .then((data: KeyStatus[]) => setKeys(data))
+      .catch(() => {});
   }, []);
 
   const hasChanges = config && draft && JSON.stringify(config) !== JSON.stringify(draft);
@@ -83,6 +117,8 @@ export function ConfigPanel() {
           },
           heartbeat: draft.heartbeat,
           tools: { allowed: draft.tools.allowed, disallowed: draft.tools.disallowed },
+          voice: draft.voice,
+          memory: { autoCapture: draft.memory.autoCapture, maxEntries: draft.memory.maxEntries, contextLimit: draft.memory.contextLimit },
         }),
       });
       if (!res.ok) throw new Error('Save failed');
@@ -390,6 +426,167 @@ export function ConfigPanel() {
             />
           ))}
         </Section>
+
+        {/* Voice */}
+        <Section label="Voice (ElevenLabs)">
+          <Field label="Enabled">
+            <button
+              onClick={() => updateDraft(d => ({ ...d, voice: { ...d.voice, enabled: !d.voice.enabled } }))}
+              className={`w-8 h-4 flex items-center transition-colors border ${
+                draft.voice.enabled
+                  ? 'bg-c-accent/20 border-c-accent/40 justify-end'
+                  : 'bg-c-surface border-c-border justify-start'
+              }`}
+            >
+              <div className={`w-3 h-3 mx-px ${draft.voice.enabled ? 'bg-c-accent' : 'bg-c-muted'}`} />
+            </button>
+          </Field>
+          <Field label="Voice ID">
+            <input
+              type="text"
+              value={draft.voice.voiceId}
+              onChange={e => updateDraft(d => ({ ...d, voice: { ...d.voice, voiceId: e.target.value } }))}
+              className="cfg-input w-48"
+              placeholder="ElevenLabs voice ID"
+            />
+          </Field>
+          <Field label="Model">
+            <select
+              value={draft.voice.model}
+              onChange={e => updateDraft(d => ({ ...d, voice: { ...d.voice, model: e.target.value } }))}
+              className="cfg-input w-48"
+            >
+              {VOICE_MODELS.map(m => <option key={m} value={m}>{m.replace('eleven_', '').replace(/_/g, ' ')}</option>)}
+            </select>
+          </Field>
+          <div>
+            <span className="text-[10px] text-c-dim block mb-1">Triggers</span>
+            <div className="flex flex-wrap gap-1.5">
+              {VOICE_TRIGGERS.map(trigger => {
+                const enabled = draft.voice.triggers.includes(trigger);
+                return (
+                  <button
+                    key={trigger}
+                    onClick={() => updateDraft(d => ({
+                      ...d,
+                      voice: {
+                        ...d.voice,
+                        triggers: enabled
+                          ? d.voice.triggers.filter(t => t !== trigger)
+                          : [...d.voice.triggers, trigger],
+                      },
+                    }))}
+                    className={`text-[9px] px-2 py-0.5 border uppercase tracking-wider transition-colors ${
+                      enabled
+                        ? 'border-c-accent/30 text-c-accent bg-c-accent/[0.06]'
+                        : 'border-c-border text-c-muted hover:text-c-dim'
+                    }`}
+                  >
+                    {trigger}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <Field label="Max chars/hr">
+            <input
+              type="number"
+              value={draft.voice.maxCharsPerHour}
+              onChange={e => updateDraft(d => ({ ...d, voice: { ...d.voice, maxCharsPerHour: parseInt(e.target.value) || 1000 } }))}
+              className="cfg-input w-20"
+              min={100}
+            />
+          </Field>
+          <Field label="Max $/day">
+            <div className="flex items-center gap-1">
+              <span className="text-c-muted text-[10px]">$</span>
+              <input
+                type="number"
+                value={draft.voice.maxCostPerDay}
+                onChange={e => updateDraft(d => ({ ...d, voice: { ...d.voice, maxCostPerDay: parseFloat(e.target.value) || 0.50 } }))}
+                className="cfg-input w-20"
+                min={0.1}
+                step={0.25}
+              />
+            </div>
+          </Field>
+        </Section>
+
+        {/* Memory */}
+        <Section label="Memory">
+          <Field label="Auto-capture">
+            <button
+              onClick={() => updateDraft(d => ({ ...d, memory: { ...d.memory, autoCapture: !d.memory.autoCapture } }))}
+              className={`w-8 h-4 flex items-center transition-colors border ${
+                draft.memory.autoCapture
+                  ? 'bg-c-accent/20 border-c-accent/40 justify-end'
+                  : 'bg-c-surface border-c-border justify-start'
+              }`}
+            >
+              <div className={`w-3 h-3 mx-px ${draft.memory.autoCapture ? 'bg-c-accent' : 'bg-c-muted'}`} />
+            </button>
+          </Field>
+          <Field label="Max entries">
+            <input
+              type="number"
+              value={draft.memory.maxEntries}
+              onChange={e => updateDraft(d => ({ ...d, memory: { ...d.memory, maxEntries: parseInt(e.target.value) || 1000 } }))}
+              className="cfg-input w-20"
+              min={100}
+            />
+          </Field>
+          <Field label="Context limit">
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={draft.memory.contextLimit}
+                onChange={e => updateDraft(d => ({ ...d, memory: { ...d.memory, contextLimit: parseInt(e.target.value) || 1 } }))}
+                className="cfg-input w-16"
+                min={1}
+                max={20}
+              />
+              <span className="text-c-muted text-[10px]">memories per query</span>
+            </div>
+          </Field>
+          <Field label="Embed model">
+            <span className="text-[10px] text-c-dim font-mono">{draft.memory.embedModel}</span>
+          </Field>
+        </Section>
+
+        {/* API Keys */}
+        <Section label="API Keys">
+          {keys.length === 0 ? (
+            <div className="text-[10px] text-c-muted py-2">Loading keys...</div>
+          ) : (
+            <KeysEditor
+              keys={keys}
+              keyInputs={keyInputs}
+              showKeyValues={showKeyValues}
+              saving={keySaving}
+              onInputChange={(key, val) => setKeyInputs(prev => ({ ...prev, [key]: val }))}
+              onToggleShow={(key) => setShowKeyValues(prev => ({ ...prev, [key]: !prev[key] }))}
+              onSave={async () => {
+                const updates = Object.fromEntries(
+                  Object.entries(keyInputs).filter(([, v]) => v !== undefined && v !== '')
+                );
+                if (Object.keys(updates).length === 0) return;
+                setKeySaving(true);
+                try {
+                  const res = await fetch('/api/keys', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                  });
+                  const updated = await res.json() as KeyStatus[];
+                  setKeys(updated);
+                  setKeyInputs({});
+                } finally {
+                  setKeySaving(false);
+                }
+              }}
+            />
+          )}
+        </Section>
       </div>
     </Panel>
   );
@@ -562,6 +759,112 @@ function SubagentCard({
               style={{ minHeight: 60, maxHeight: 200, resize: 'vertical' }}
             />
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Keys Editor ────────────────────────────────────────────────────
+
+function KeysEditor({
+  keys,
+  keyInputs,
+  showKeyValues,
+  saving,
+  onInputChange,
+  onToggleShow,
+  onSave,
+}: {
+  keys: KeyStatus[];
+  keyInputs: Record<string, string>;
+  showKeyValues: Record<string, boolean>;
+  saving: boolean;
+  onInputChange: (key: string, val: string) => void;
+  onToggleShow: (key: string) => void;
+  onSave: () => void;
+}) {
+  const [editing, setEditing] = useState<Set<string>>(new Set());
+
+  // Group by category
+  const groups = new Map<string, KeyStatus[]>();
+  for (const k of keys) {
+    const existing = groups.get(k.group) ?? [];
+    existing.push(k);
+    groups.set(k.group, existing);
+  }
+
+  const hasChanges = Object.entries(keyInputs).some(([, v]) => v !== undefined && v !== '');
+
+  return (
+    <div className="space-y-3">
+      {Array.from(groups.entries()).map(([group, groupKeys]) => (
+        <div key={group}>
+          <div className="text-[9px] text-c-muted uppercase tracking-wider mb-1">{group}</div>
+          <div className="space-y-1">
+            {groupKeys.map(k => {
+              const isEditing = editing.has(k.key);
+              const inputVal = keyInputs[k.key] ?? '';
+              const showing = showKeyValues[k.key] ?? false;
+
+              return (
+                <div key={k.key} className="flex items-center gap-2">
+                  <div className={`w-1.5 h-1.5 shrink-0 ${k.set ? 'bg-c-green' : 'bg-c-red/60'}`} />
+                  <span className="text-[10px] text-c-dim w-24 shrink-0 truncate" title={k.key}>{k.label}</span>
+                  <div className="flex-1 flex items-center gap-1">
+                    {isEditing ? (
+                      <input
+                        type={showing ? 'text' : 'password'}
+                        value={inputVal}
+                        onChange={e => onInputChange(k.key, e.target.value)}
+                        className="cfg-input flex-1 text-[10px]"
+                        placeholder="Paste key value"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="text-[10px] text-c-dim font-mono flex-1">
+                        {k.set ? k.masked : <span className="text-c-red/60 italic">not set</span>}
+                      </span>
+                    )}
+                    {isEditing ? (
+                      <button
+                        onClick={() => onToggleShow(k.key)}
+                        className="text-c-muted hover:text-c-dim transition-colors p-0.5"
+                        title={showing ? 'Hide' : 'Show'}
+                      >
+                        {showing ? <EyeOff size={10} /> : <Eye size={10} />}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setEditing(prev => new Set([...prev, k.key]))}
+                        className="text-c-muted hover:text-c-accent transition-colors p-0.5"
+                        title="Edit key"
+                      >
+                        <Key size={10} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {(hasChanges || editing.size > 0) && (
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            onClick={() => { setEditing(new Set()); }}
+            className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-c-muted hover:text-c-dim transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { onSave(); setEditing(new Set()); }}
+            disabled={saving || !hasChanges}
+            className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider border border-c-accent text-c-accent bg-c-accent/5 hover:bg-c-accent/10 transition-colors disabled:opacity-30"
+          >
+            {saving ? 'Saving...' : 'Save Keys'}
+          </button>
         </div>
       )}
     </div>

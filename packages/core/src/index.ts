@@ -5,6 +5,8 @@ export { loadConfig, getConfig, updateConfig } from './config.js';
 export { readMemory, writeMemory, appendMemory, readActivity, appendActivity, appendTranscript, readTranscript, listConversations } from './memory.js';
 export type { ConversationInfo } from './memory.js';
 export { initUsageTracker, getUsageSummary, flushUsage } from './usage.js';
+export { initKeys, getKeyStatuses, setKeys } from './keys.js';
+export type { KeyStatus, ManagedKey } from './keys.js';
 
 export type { SpecterEvents } from './events.js';
 export type { ScoredMemory } from './memory-types.js';
