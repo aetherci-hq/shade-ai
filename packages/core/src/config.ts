@@ -1,7 +1,8 @@
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import type { SpecterConfig } from './types.js';
+import { eventBus } from './events.js';
 
 function loadDotenv(baseDir: string): void {
   const envPath = resolve(baseDir, '.env');
@@ -50,6 +51,16 @@ const DEFAULTS: SpecterConfig = {
     disallowed: [],
     userDir: './tools',
   },
+  voice: {
+    enabled: false,
+    provider: 'elevenlabs',
+    apiKey: '',
+    voiceId: '21m00Tcm4TlvDq8ikWAM',
+    model: 'eleven_turbo_v2_5',
+    triggers: ['responses', 'heartbeat'],
+    maxCharsPerHour: 5000,
+    maxCostPerDay: 1.00,
+  },
   guardrails: {
     blockedCommands: ['rm -rf /', 'format', 'shutdown', 'reboot'],
     blockedPaths: ['/etc', '/System', 'C:\\Windows'],
@@ -92,9 +103,11 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
 }
 
 let _config: SpecterConfig | null = null;
+let _baseDir: string = '';
 
 export function loadConfig(baseDir: string): SpecterConfig {
   if (_config) return _config;
+  _baseDir = baseDir;
   loadDotenv(baseDir);
 
   const configPath = resolve(baseDir, 'specter.config.yaml');
@@ -121,4 +134,49 @@ export function loadConfig(baseDir: string): SpecterConfig {
 export function getConfig(): SpecterConfig {
   if (!_config) throw new Error('Config not loaded. Call loadConfig() first.');
   return _config;
+}
+
+/** Apply partial config updates, persist to YAML, and emit config:updated */
+export function updateConfig(partial: Record<string, unknown>): SpecterConfig {
+  if (!_config) throw new Error('Config not loaded. Call loadConfig() first.');
+
+  // Deep merge partial into current config
+  const updated = deepMerge(_config as unknown as Record<string, unknown>, partial) as unknown as SpecterConfig;
+
+  // Re-resolve paths against baseDir
+  updated.memory.dir = resolve(_baseDir, updated.memory.dir);
+  updated.memory.stateDir = resolve(_baseDir, updated.memory.stateDir);
+  updated.tools.userDir = resolve(_baseDir, updated.tools.userDir);
+
+  _config = updated;
+
+  // Write back to YAML (use a clean copy without resolved absolute paths)
+  const configPath = resolve(_baseDir, 'specter.config.yaml');
+  const writeable = JSON.parse(JSON.stringify(updated)) as Record<string, unknown>;
+
+  // Convert absolute paths back to relative for persistence
+  const mem = writeable['memory'] as Record<string, unknown>;
+  if (mem) {
+    mem['dir'] = relativeTo(_baseDir, updated.memory.dir);
+    mem['stateDir'] = relativeTo(_baseDir, updated.memory.stateDir);
+  }
+  const tools = writeable['tools'] as Record<string, unknown>;
+  if (tools) {
+    tools['userDir'] = relativeTo(_baseDir, updated.tools.userDir);
+  }
+
+  // Remove server config from writes (not hot-reloadable)
+  delete writeable['server'];
+
+  writeFileSync(configPath, stringifyYaml(writeable, { lineWidth: 120 }), 'utf-8');
+
+  // Emit event with list of changed top-level fields
+  eventBus.emit('config:updated', { fields: Object.keys(partial) });
+
+  return _config;
+}
+
+function relativeTo(base: string, absolute: string): string {
+  const rel = absolute.replace(base, '').replace(/^[\\/]+/, '');
+  return rel || '.';
 }

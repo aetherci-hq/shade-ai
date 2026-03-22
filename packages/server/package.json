@@ -15,6 +15,7 @@
     "@fastify/websocket": "^11.0.0",
     "@specter/core": "*",
     "@specter/memory": "*",
+    "@specter/voice": "*",
     "@specter/dashboard": "*",
     "fastify": "^5.2.0"
   },

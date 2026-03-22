@@ -47,6 +47,13 @@ export class HeartbeatDaemon {
     }
   }
 
+  updateInterval(ms: number): void {
+    this._intervalMs = ms;
+    if (this._enabled) {
+      this.scheduleNext();
+    }
+  }
+
   async triggerNow(): Promise<void> {
     await this.tick();
   }

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Shell, type View } from './components/Shell';
 import { useSocket } from './hooks/useSocket';
 import { useAgent } from './hooks/useAgent';
+import { useVoice } from './hooks/useVoice';
 import { ActivityPanel } from './panels/ActivityPanel';
 import { ChatPanel } from './panels/ChatPanel';
 import { MemoryPanel } from './panels/MemoryPanel';
@@ -35,6 +36,7 @@ export interface AppConfig {
 export function App() {
   const { connected, events, send } = useSocket();
   const agent = useAgent(events);
+  const voice = useVoice();
   const [view, setView] = useState<View>('activity');
   const [memoryContent, setMemoryContent] = useState<Record<string, string>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -42,6 +44,7 @@ export function App() {
   const lastProcessedRef = useRef(0);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [chatLoaded, setChatLoaded] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
 
   // Track streaming assistant message
   const streamingRef = useRef<{ ts: number; content: string } | null>(null);
@@ -93,6 +96,10 @@ export function App() {
     lastProcessedRef.current = events.length;
 
     for (const evt of newEvents) {
+      // Skip heartbeat events — they clutter the chat window
+      const evtConvId = evt.data['conversationId'] as string | undefined;
+      if (evtConvId && evtConvId.startsWith('heartbeat')) continue;
+
       if (evt.type === 'agent:text_delta') {
         const delta = evt.data['delta'] as string;
         if (!streamingRef.current) {
@@ -178,6 +185,13 @@ export function App() {
     }
   }, [events, refreshAllMemory]);
 
+  const handleNewChat = useCallback(() => {
+    setChatMessages([]);
+    setConversationId(`chat-${Date.now()}`);
+    streamingRef.current = null;
+    lastProcessedRef.current = events.length;
+  }, [events.length]);
+
   const handleChatSend = useCallback((message: string) => {
     setChatMessages(prev => [...prev, { role: 'user', content: message, ts: Date.now() }]);
     send('chat:send', { message, conversationId });
@@ -216,9 +230,15 @@ export function App() {
       startTime={START_TIME}
       agentName={agentName}
       modelName={appConfig?.llm.model ?? 'sonnet'}
+      focusMode={focusMode}
+      onFocusModeToggle={setFocusMode}
+      voice={voice}
+      focusChatPanel={
+        <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} />
+      }
     >
       {view === 'activity' && <ActivityPanel events={events} />}
-      {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} isRunning={agent.isRunning} agentName={agentName} />}
+      {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} />}
       {view === 'heartbeat' && (
         <HeartbeatPanel
           agent={agent}

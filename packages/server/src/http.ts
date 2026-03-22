@@ -7,9 +7,32 @@ import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { readdirSync, readFileSync } from 'fs';
 import type { Agent, HeartbeatDaemon, SpecterConfig } from '@specter/core';
-import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, getUsageSummary } from '@specter/core';
+import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, updateConfig, getUsageSummary } from '@specter/core';
 import { getMemoryStore } from '@specter/memory';
 import { setupWebSocket } from './ws.js';
+
+function formatConfigResponse(cfg: SpecterConfig) {
+  return {
+    name: cfg.name,
+    llm: { provider: cfg.llm.provider, model: cfg.llm.model },
+    agent: {
+      maxTurns: cfg.agent.maxTurns,
+      maxBudgetUsd: cfg.agent.maxBudgetUsd,
+      permissionMode: cfg.agent.permissionMode,
+      subagents: cfg.agent.subagents ? Object.fromEntries(
+        Object.entries(cfg.agent.subagents).map(([name, def]) => [name, {
+          description: def.description,
+          prompt: def.prompt,
+          model: def.model,
+          tools: def.tools ?? [],
+          maxTurns: def.maxTurns,
+        }])
+      ) : {},
+    },
+    heartbeat: cfg.heartbeat,
+    tools: { allowed: cfg.tools.allowed, disallowed: cfg.tools.disallowed },
+  };
+}
 
 export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, config: SpecterConfig) {
   const app = Fastify({ logger: false });
@@ -83,24 +106,16 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
 
   app.get('/api/config', async () => {
     const cfg = getConfig();
-    return {
-      name: cfg.name,
-      llm: { provider: cfg.llm.provider, model: cfg.llm.model },
-      agent: {
-        maxTurns: cfg.agent.maxTurns,
-        maxBudgetUsd: cfg.agent.maxBudgetUsd,
-        permissionMode: cfg.agent.permissionMode,
-        subagents: cfg.agent.subagents ? Object.fromEntries(
-          Object.entries(cfg.agent.subagents).map(([name, def]) => [name, {
-            description: def.description,
-            model: def.model,
-            tools: def.tools,
-          }])
-        ) : {},
-      },
-      heartbeat: cfg.heartbeat,
-      tools: { allowed: cfg.tools.allowed, disallowed: cfg.tools.disallowed },
-    };
+    return formatConfigResponse(cfg);
+  });
+
+  app.put<{ Body: Record<string, unknown> }>('/api/config', async (req) => {
+    const partial = req.body;
+    // Prevent runtime changes to server binding and memory paths
+    delete partial['server'];
+    delete partial['memory'];
+    const updated = updateConfig(partial);
+    return formatConfigResponse(updated);
   });
 
   app.get('/api/tools', async () => {
