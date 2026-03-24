@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Panel } from '../components/Panel';
 import { Save, RotateCcw, Check, AlertTriangle, Plus, Copy, Trash2, ChevronDown, ChevronRight, Eye, EyeOff, Key } from 'lucide-react';
+import { authFetch } from '../auth';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -14,7 +15,9 @@ interface SubagentDef {
 
 interface ConfigData {
   name: string;
+  timezone: string;
   llm: { provider: string; model: string };
+  models?: { default: string; advanced: string; heartbeat: string };
   agent: {
     maxTurns: number;
     maxBudgetUsd?: number;
@@ -22,6 +25,7 @@ interface ConfigData {
     subagents: Record<string, SubagentDef>;
   };
   heartbeat: { enabled: boolean; intervalMinutes: number };
+  server?: { port: number; host: string; authToken?: string };
   tools: { allowed: string[]; disallowed: string[] };
   voice: {
     enabled: boolean;
@@ -82,16 +86,17 @@ export function ConfigPanel() {
   const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
   const [showKeyValues, setShowKeyValues] = useState<Record<string, boolean>>({});
   const [keySaving, setKeySaving] = useState(false);
+  const [needsRestart, setNeedsRestart] = useState(false);
 
   useEffect(() => {
-    fetch('/api/config')
+    authFetch('/api/config')
       .then(r => r.json())
       .then((data: ConfigData) => {
         setConfig(data);
         setDraft(data);
       })
       .catch(() => setConfig(null));
-    fetch('/api/keys')
+    authFetch('/api/keys')
       .then(r => r.json())
       .then((data: KeyStatus[]) => setKeys(data))
       .catch(() => {});
@@ -102,30 +107,51 @@ export function ConfigPanel() {
   const handleSave = useCallback(async () => {
     if (!draft || !hasChanges) return;
     setSaveState('saving');
+
+    // Detect if server settings changed (requires restart)
+    const serverChanged = config?.server && draft.server &&
+      (config.server.host !== draft.server.host ||
+       config.server.port !== draft.server.port ||
+       (draft.server.authToken && draft.server.authToken !== '••••••••'));
+
     try {
-      const res = await fetch('/api/config', {
+      const payload: Record<string, unknown> = {
+        name: draft.name,
+        timezone: draft.timezone,
+        llm: { model: draft.llm.model },
+        models: draft.models,
+        agent: {
+          maxTurns: draft.agent.maxTurns,
+          maxBudgetUsd: draft.agent.maxBudgetUsd,
+          permissionMode: draft.agent.permissionMode,
+          subagents: draft.agent.subagents,
+        },
+        heartbeat: draft.heartbeat,
+        tools: { allowed: draft.tools.allowed, disallowed: draft.tools.disallowed },
+        voice: draft.voice,
+        memory: { autoCapture: draft.memory.autoCapture, maxEntries: draft.memory.maxEntries, contextLimit: draft.memory.contextLimit },
+      };
+      // Include server config if present
+      if (draft.server) {
+        payload.server = draft.server;
+      }
+
+      const res = await authFetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: draft.name,
-          llm: { model: draft.llm.model },
-          agent: {
-            maxTurns: draft.agent.maxTurns,
-            maxBudgetUsd: draft.agent.maxBudgetUsd,
-            permissionMode: draft.agent.permissionMode,
-            subagents: draft.agent.subagents,
-          },
-          heartbeat: draft.heartbeat,
-          tools: { allowed: draft.tools.allowed, disallowed: draft.tools.disallowed },
-          voice: draft.voice,
-          memory: { autoCapture: draft.memory.autoCapture, maxEntries: draft.memory.maxEntries, contextLimit: draft.memory.contextLimit },
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Save failed');
       const updated = await res.json() as ConfigData;
+      // Preserve draft server settings — the API returns the running config which hasn't restarted yet
+      const mergedDraft = { ...updated };
+      if (draft.server && serverChanged) {
+        mergedDraft.server = draft.server;
+      }
       setConfig(updated);
-      setDraft(updated);
+      setDraft(mergedDraft);
       setSaveState('saved');
+      if (serverChanged) setNeedsRestart(true);
       setTimeout(() => setSaveState('idle'), 2000);
     } catch {
       setSaveState('error');
@@ -276,7 +302,30 @@ export function ConfigPanel() {
       className="h-full"
     >
       <div className="space-y-4">
-        {/* Agent Name */}
+        {/* Restart banner */}
+        {needsRestart && (
+          <div className="bg-c-amber/10 border border-c-amber/30 p-3 flex items-center justify-between animate-fade-in">
+            <div>
+              <div className="text-[12px] text-c-amber font-medium">Restart required</div>
+              <div className="text-[11px] text-c-dim">Server binding changes take effect after restart.</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-c-muted">
+                {draft?.server?.authToken && draft.server.authToken !== '••••••••'
+                  ? `Token: ${draft.server.authToken}`
+                  : ''}
+              </span>
+              <button
+                onClick={() => setNeedsRestart(false)}
+                className="text-[10px] text-c-muted border border-c-border px-2 py-0.5 hover:text-c-dim uppercase tracking-wider"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Identity */}
         <Section label="Identity">
           <Field label="Name">
             <input
@@ -284,6 +333,15 @@ export function ConfigPanel() {
               value={draft.name}
               onChange={e => updateDraft(d => ({ ...d, name: e.target.value }))}
               className="cfg-input w-40"
+            />
+          </Field>
+          <Field label="Timezone">
+            <input
+              type="text"
+              value={draft.timezone}
+              onChange={e => updateDraft(d => ({ ...d, timezone: e.target.value }))}
+              className="cfg-input w-48"
+              placeholder="America/New_York"
             />
           </Field>
         </Section>
@@ -300,6 +358,39 @@ export function ConfigPanel() {
             </select>
           </Field>
         </Section>
+
+        {/* Models */}
+        {draft.models && (
+          <Section label="Models">
+            <Field label="Default (Chat)">
+              <select
+                value={draft.models.default}
+                onChange={e => updateDraft(d => ({ ...d, models: { ...d.models!, default: e.target.value } }))}
+                className="cfg-input w-56"
+              >
+                {MODELS.map(m => <option key={m} value={m}>{m.replace('claude-', '').replace(/-\d+$/, '')}</option>)}
+              </select>
+            </Field>
+            <Field label="Advanced (Deep Work)">
+              <select
+                value={draft.models.advanced}
+                onChange={e => updateDraft(d => ({ ...d, models: { ...d.models!, advanced: e.target.value } }))}
+                className="cfg-input w-56"
+              >
+                {MODELS.map(m => <option key={m} value={m}>{m.replace('claude-', '').replace(/-\d+$/, '')}</option>)}
+              </select>
+            </Field>
+            <Field label="Heartbeat">
+              <select
+                value={draft.models.heartbeat}
+                onChange={e => updateDraft(d => ({ ...d, models: { ...d.models!, heartbeat: e.target.value } }))}
+                className="cfg-input w-56"
+              >
+                {[...MODELS, 'haiku'].map(m => <option key={m} value={m}>{m.replace('claude-', '').replace(/-\d+$/, '')}</option>)}
+              </select>
+            </Field>
+          </Section>
+        )}
 
         {/* Agent */}
         <Section label="Agent">
@@ -372,6 +463,52 @@ export function ConfigPanel() {
             </div>
           </Field>
         </Section>
+
+        {/* Server / Remote Access */}
+        {draft.server && (
+          <Section label="Remote Access">
+            <Field label="Host">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={draft.server.host}
+                  onChange={e => {
+                    const newHost = e.target.value;
+                    updateDraft(d => {
+                      const srv = { ...d.server!, host: newHost };
+                      // Auto-generate token when switching to network mode without one
+                      if (newHost === '0.0.0.0' && (!srv.authToken || srv.authToken === '••••••••')) {
+                        srv.authToken = crypto.randomUUID().replace(/-/g, '').slice(0, 24);
+                      }
+                      return { ...d, server: srv };
+                    });
+                  }}
+                  className="cfg-input w-36"
+                  placeholder="127.0.0.1"
+                />
+                <span className="text-c-muted text-[10px]">{draft.server.host === '0.0.0.0' ? 'network' : 'local only'}</span>
+              </div>
+            </Field>
+            <Field label="Port">
+              <input
+                type="number"
+                value={draft.server.port}
+                onChange={e => updateDraft(d => ({ ...d, server: { ...d.server!, port: parseInt(e.target.value) || 3700 } }))}
+                className="cfg-input w-20"
+              />
+            </Field>
+            <Field label="Auth Token">
+              <input
+                type="text"
+                value={draft.server.authToken === '••••••••' ? '' : (draft.server.authToken ?? '')}
+                onChange={e => updateDraft(d => ({ ...d, server: { ...d.server!, authToken: e.target.value || undefined } }))}
+                className="cfg-input w-48"
+                placeholder={draft.server.authToken === '••••••••' ? 'Set (enter new to change)' : 'None (no auth)'}
+              />
+              <div className="text-[9px] text-c-muted mt-1">Required when host is 0.0.0.0. Restart needed.</div>
+            </Field>
+          </Section>
+        )}
 
         {/* Tools */}
         <Section label="Tools">
@@ -572,7 +709,7 @@ export function ConfigPanel() {
                 if (Object.keys(updates).length === 0) return;
                 setKeySaving(true);
                 try {
-                  const res = await fetch('/api/keys', {
+                  const res = await authFetch('/api/keys', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updates),
