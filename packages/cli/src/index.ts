@@ -16,7 +16,7 @@ const program = new Command()
   .description('Shade — Lightweight Autonomous AI Agent')
   .version('0.1.0');
 
-// specter init
+// shade init
 program
   .command('init')
   .description('Set up a new agent (name, API key, persona)')
@@ -26,20 +26,19 @@ program
     await runOnboarding(dir);
   });
 
-// specter start
+// shade start
 program
   .command('start')
-  .description('Start the Specter server + agent + heartbeat')
+  .description('Start the Shade server + agent + heartbeat')
   .option('-p, --port <port>', 'Port number', String(DEFAULT_PORT))
   .option('--no-heartbeat', 'Disable heartbeat daemon')
   .action(async (opts) => {
-    // Import and run the server directly
-    process.env.SPECTER_PORT = opts.port;
-    if (!opts.heartbeat) process.env.SPECTER_NO_HEARTBEAT = '1';
+    process.env.SHADE_PORT = opts.port;
+    if (!opts.heartbeat) process.env.SHADE_NO_HEARTBEAT = '1';
     await import('@specter/server');
   });
 
-// specter chat
+// shade chat
 program
   .command('chat <message>')
   .description('Send a message to the running agent')
@@ -54,15 +53,15 @@ program
       const data = await res.json() as { response: string };
       console.log(data.response);
     } catch {
-      console.error('Error: Could not connect to Specter. Is it running?');
+      console.error('Error: Could not connect to Shade. Is it running?');
       process.exit(1);
     }
   });
 
-// specter status
+// shade status
 program
   .command('status')
-  .description('Check Specter server status')
+  .description('Check Shade server status')
   .option('-p, --port <port>', 'Server port', String(DEFAULT_PORT))
   .action(async (opts) => {
     try {
@@ -70,12 +69,12 @@ program
       const data = await res.json() as Record<string, unknown>;
       console.log(JSON.stringify(data, null, 2));
     } catch {
-      console.error('Specter is not running.');
+      console.error('Shade is not running.');
       process.exit(1);
     }
   });
 
-// specter heartbeat
+// shade heartbeat
 const hb = program.command('heartbeat').description('Control the heartbeat daemon');
 
 hb.command('on')
@@ -102,7 +101,7 @@ hb.command('now')
     console.log('Heartbeat triggered.');
   });
 
-// specter logs
+// shade logs
 program
   .command('logs')
   .description('View activity logs')
@@ -118,15 +117,12 @@ program
         console.log(`${ts}  ${type.padEnd(20)}  ${JSON.stringify(entry).slice(0, 100)}`);
       }
     } catch {
-      console.error('Error: Could not connect to Specter.');
+      console.error('Error: Could not connect to Shade.');
       process.exit(1);
     }
   });
 
 async function sendWsMessage(opts: { port?: string }, type: string, data: Record<string, unknown>): Promise<void> {
-  // Use REST fallback since CLI doesn't maintain WebSocket
-  // For toggle/trigger we'll use a simple POST approach via chat endpoint hack
-  // Better: add dedicated REST endpoints later. For now, use WebSocket briefly.
   const { WebSocket } = await import('ws');
   const port = opts.port ?? String(DEFAULT_PORT);
   return new Promise((resolve, reject) => {
