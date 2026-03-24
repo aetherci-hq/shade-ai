@@ -39,9 +39,24 @@ interface UsageFile {
   daily: DailyUsage[];
 }
 
-const SPECTER_DIR = resolve(homedir(), '.shade');
-const USAGE_PATH = resolve(SPECTER_DIR, 'usage.json');
+const SHADE_DIR = resolve(homedir(), '.shade');
+const USAGE_PATH = resolve(SHADE_DIR, 'usage.json');
 const MAX_DAILY_ENTRIES = 90; // Keep 90 days of history
+const LEGACY_DIR = resolve(homedir(), '.specter');
+
+// Auto-migrate from ~/.specter to ~/.shade on first run
+function migrateFromLegacy(): void {
+  if (existsSync(USAGE_PATH)) return; // already have data
+  const legacyPath = resolve(LEGACY_DIR, 'usage.json');
+  if (existsSync(legacyPath)) {
+    mkdirSync(SHADE_DIR, { recursive: true });
+    try {
+      const data = readFileSync(legacyPath, 'utf-8');
+      writeFileSync(USAGE_PATH, data, 'utf-8');
+      console.log('[shade] Migrated usage data from ~/.specter to ~/.shade');
+    } catch {}
+  }
+}
 
 function today(): string {
   try {
@@ -80,7 +95,7 @@ function loadFromDisk(): UsageFile {
 }
 
 function saveToDisk(data: UsageFile): void {
-  mkdirSync(SPECTER_DIR, { recursive: true });
+  mkdirSync(SHADE_DIR, { recursive: true });
   writeFileSync(USAGE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 }
 
@@ -102,6 +117,7 @@ let _dirty = false;
 let _flushTimer: ReturnType<typeof setInterval> | null = null;
 
 export function initUsageTracker(): void {
+  migrateFromLegacy();
   const persisted = loadFromDisk();
 
   _data = {
