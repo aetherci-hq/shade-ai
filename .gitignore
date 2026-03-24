@@ -4,6 +4,7 @@ dist/
 state/
 *.js.map
 *.d.ts.map
-tools/.config.json
-tools/_run.ts
+tools/*
+!tools/system-info.ts
+!tools/weather.ts
 .claude/settings.local.json
