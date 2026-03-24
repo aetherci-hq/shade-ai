@@ -1,11 +1,11 @@
 {
-  "name": "specter-ai",
+  "name": "shade-ai",
   "version": "0.1.0",
-  "description": "Specter — Lightweight Autonomous AI Agent. Persistent memory, heartbeat daemon, voice output, custom tools, and a dashboard.",
+  "description": "Shade — Lightweight Autonomous AI Agent. Persistent memory, heartbeat daemon, voice output, custom tools, and a dashboard.",
   "type": "module",
   "bin": {
-    "specter-ai": "dist/index.js",
-    "specter": "dist/index.js"
+    "shade-ai": "dist/index.js",
+    "shade": "dist/index.js"
   },
   "scripts": {
     "build": "tsup && cp -r ../dashboard/dist dist/dashboard 2>/dev/null || xcopy /E /I /Q ..\\dashboard\\dist dist\\dashboard >nul 2>&1 || true",
@@ -16,7 +16,7 @@
     "dist"
   ],
   "keywords": [
-    "ai", "agent", "autonomous", "claude", "specter",
+    "ai", "agent", "autonomous", "claude", "shade",
     "personal-assistant", "ai-agent", "chatbot", "llm"
   ],
   "license": "MIT",
