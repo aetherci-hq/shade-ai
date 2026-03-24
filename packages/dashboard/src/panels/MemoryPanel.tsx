@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Panel } from '../components/Panel';
 import { Search, Plus, Trash2, Brain, FileText, BarChart3, X } from 'lucide-react';
+import { authFetch } from '../auth';
 
 type Tab = 'notes' | 'recall' | 'stats';
 type MemoryFile = 'MEMORY' | 'HEARTBEAT';
@@ -97,15 +98,17 @@ function NotesTab({ onSave, onLoad, memoryContent }: Props) {
         {dirty && <span className="text-c-amber text-[9px] font-medium uppercase tracking-wider">Unsaved</span>}
       </div>
 
-      <textarea
-        value={content}
-        onChange={e => { setContent(e.target.value); setDirty(true); }}
-        className="w-full bg-c-surface border border-c-border p-3 text-c-text font-mono text-xs resize-none outline-none focus:border-c-accent/25 flex-1"
-        style={{ caretColor: 'var(--color-c-accent)', minHeight: '200px' }}
-        spellCheck={false}
-      />
+      <div className="flex-1 min-h-0 flex flex-col">
+        <textarea
+          value={content}
+          onChange={e => { setContent(e.target.value); setDirty(true); }}
+          className="w-full bg-c-surface border border-c-border p-3 text-c-text font-mono text-[12px] resize-none outline-none focus:border-c-accent/25 flex-1 leading-relaxed"
+          style={{ caretColor: 'var(--color-c-accent)' }}
+          spellCheck={false}
+        />
+      </div>
 
-      <div className="flex justify-end mt-2">
+      <div className="flex justify-end mt-2 shrink-0">
         <button
           onClick={handleSave}
           disabled={!dirty}
@@ -128,7 +131,7 @@ function RecallTab() {
 
   // Load recent on mount
   useEffect(() => {
-    fetch('/api/memories?limit=20')
+    authFetch('/api/memories?limit=20')
       .then(r => r.json())
       .then(setResults)
       .catch(() => {});
@@ -137,7 +140,7 @@ function RecallTab() {
   const handleSearch = useCallback(async () => {
     if (!query.trim()) {
       setHasSearched(false);
-      fetch('/api/memories?limit=20')
+      authFetch('/api/memories?limit=20')
         .then(r => r.json())
         .then(setResults)
         .catch(() => {});
@@ -266,7 +269,7 @@ function StatsTab() {
   const [stats, setStats] = useState<MemoryStats | null>(null);
 
   useEffect(() => {
-    fetch('/api/memories/stats')
+    authFetch('/api/memories/stats')
       .then(r => r.json())
       .then(setStats)
       .catch(() => {});
@@ -355,7 +358,7 @@ function AddMemoryForm({ onClose }: { onClose: () => void }) {
     setSaving(true);
     try {
       const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
-      await fetch('/api/memories', {
+      await authFetch('/api/memories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, tags: tagList.length ? tagList : undefined }),
@@ -415,6 +418,7 @@ export function MemoryPanel({ onSave, onLoad, memoryContent }: Props) {
   return (
     <Panel
       title="Memory"
+      scroll={false}
       status={
         <button
           onClick={() => { setTab('recall'); setShowAddForm(true); }}
@@ -453,10 +457,10 @@ export function MemoryPanel({ onSave, onLoad, memoryContent }: Props) {
       )}
 
       {/* Tab content */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {tab === 'notes' && <NotesTab onSave={onSave} onLoad={onLoad} memoryContent={memoryContent} />}
-        {tab === 'recall' && <RecallTab />}
-        {tab === 'stats' && <StatsTab />}
+        {tab === 'recall' && <div className="flex-1 min-h-0 overflow-y-auto"><RecallTab /></div>}
+        {tab === 'stats' && <div className="flex-1 min-h-0 overflow-y-auto"><StatsTab /></div>}
       </div>
     </Panel>
   );

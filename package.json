@@ -16,5 +16,8 @@
     "dev:dashboard": "npm run dev --workspace=packages/dashboard",
     "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/memory && npm run build --workspace=packages/voice && npm run build --workspace=packages/server && npm run build --workspace=packages/dashboard && npm run build --workspace=packages/cli",
     "start": "npm run start --workspace=packages/server"
+  },
+  "dependencies": {
+    "puppeteer": "^24.40.0"
   }
 }

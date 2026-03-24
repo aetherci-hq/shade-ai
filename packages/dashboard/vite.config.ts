@@ -7,10 +7,18 @@ export default defineConfig({
   server: {
     port: 3701,
     proxy: {
-      '/api': 'http://127.0.0.1:3700',
+      '/api': {
+        target: 'http://127.0.0.1:3700',
+        configure: (proxy) => {
+          proxy.on('error', () => {});
+        },
+      },
       '/ws': {
         target: 'ws://127.0.0.1:3700',
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', () => {});
+        },
       },
     },
   },

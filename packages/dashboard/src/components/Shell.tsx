@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { Activity, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, HeartPulse, Fingerprint, Volume2, VolumeX } from 'lucide-react';
+import { Activity, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, ChevronLeft, HeartPulse, Fingerprint, Volume2, VolumeX, Mic, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { AgentState } from '../hooks/useAgent';
+import { authFetch } from '../auth';
 
 export type View = 'activity' | 'chat' | 'heartbeat' | 'persona' | 'memory' | 'tools' | 'config';
 
@@ -20,6 +21,7 @@ interface ShellProps {
   onFocusModeToggle: (v: boolean) => void;
   focusChatPanel: ReactNode;
   voice: { muted: boolean; speaking: boolean; toggleMute: () => void };
+  onVoiceMode?: () => void;
 }
 
 const NAV_ITEMS: { id: View; label: string; icon: typeof Activity }[] = [
@@ -54,10 +56,23 @@ function formatUptime(ms: number): string {
   return `${s}s`;
 }
 
-export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime, agentName, modelName, focusMode, onFocusModeToggle, focusChatPanel, voice }: ShellProps) {
+export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime, agentName, modelName, focusMode, onFocusModeToggle, focusChatPanel, voice, onVoiceMode }: ShellProps) {
   const [clock, setClock] = useState(new Date());
   const [sessionCost, setSessionCost] = useState(0);
   const costFetchRef = useRef(0);
+  // Auto-collapse sidebar on small screens
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
+
+  const toggleSidebar = useCallback(() => setCollapsed(c => !c), []);
+
+  // Listen for resize — auto-collapse on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) setCollapsed(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 1000);
@@ -67,7 +82,7 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
   // Fetch actual cost from persistent tracker periodically
   useEffect(() => {
     const load = () => {
-      fetch('/api/usage')
+      authFetch('/api/usage')
         .then(r => r.json())
         .then(data => { if (data?.session) setSessionCost(data.session.costUsd); })
         .catch(() => {});
@@ -96,62 +111,110 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <aside className="w-52 shrink-0 bg-c-panel border-r border-c-border flex flex-col">
-          {/* Logo */}
-          <div className="px-4 py-4 border-b border-c-border">
-            <div className="flex items-center gap-2">
-              <Zap size={14} className="text-c-accent" />
-              <span className="text-[11px] font-medium text-c-text glow-text-strong tracking-[0.2em]">{agentName.toUpperCase()}</span>
-            </div>
-            <div className="flex items-center gap-1.5 mt-2">
-              <div className={`w-1.5 h-1.5 ${connected ? 'bg-c-green animate-pulse-live' : 'bg-c-red'}`} />
-              <span className={`text-[10px] font-medium uppercase tracking-[0.1em] ${connected ? (agent.isRunning ? 'text-c-amber' : 'text-c-green') : 'text-c-red'}`}>
-                {connected ? (agent.isRunning ? 'Working' : 'Alive') : 'Disconnected'}
-              </span>
-            </div>
+        <aside className={`shrink-0 bg-c-panel border-r border-c-border flex flex-col transition-all duration-200 ${collapsed ? 'w-12' : 'w-52'}`}>
+          {/* Identity */}
+          <div className={`border-b border-c-border relative ${collapsed ? 'px-2 py-3' : 'px-4 pt-5 pb-4'}`}>
+            {/* Accent edge — warm copper top border on header only */}
+            {!collapsed && <div className="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-c-accent/40 to-transparent" />}
+
+            {collapsed ? (
+              /* Collapsed: icon + status dot */
+              <div className="flex flex-col items-center gap-2">
+                <button onClick={toggleSidebar} className="text-c-accent hover:text-c-accent/80 transition-colors" title="Expand sidebar">
+                  <PanelLeftOpen size={15} />
+                </button>
+                <div className={`w-2 h-2 ${connected ? (agent.isRunning ? 'bg-c-amber animate-pulse-live' : 'bg-c-green animate-pulse-live') : 'bg-c-red'}`} />
+              </div>
+            ) : (
+              /* Expanded: prominent name + status */
+              <>
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="text-[18px] font-medium text-c-text tracking-[0.18em] leading-none glow-text-strong">
+                      {agentName.toUpperCase()}
+                    </div>
+                    <div className="text-[9px] text-c-muted tracking-[0.3em] uppercase mt-1">Autonomous Agent</div>
+                  </div>
+                  <button onClick={toggleSidebar} className="text-c-muted hover:text-c-accent transition-colors mt-0.5" title="Collapse sidebar">
+                    <PanelLeftClose size={13} />
+                  </button>
+                </div>
+
+                {/* Status line with accent dash */}
+                <div className="flex items-center gap-2">
+                  <div className={`w-5 h-px ${connected ? (agent.isRunning ? 'bg-c-amber' : 'bg-c-green') : 'bg-c-red'}`} />
+                  <div className={`w-1.5 h-1.5 ${connected ? (agent.isRunning ? 'bg-c-amber animate-pulse-live' : 'bg-c-green animate-pulse-live') : 'bg-c-red'}`} />
+                  <span className={`text-[10px] font-medium uppercase tracking-[0.12em] ${connected ? (agent.isRunning ? 'text-c-amber' : 'text-c-green') : 'text-c-red'}`}>
+                    {connected ? (agent.isRunning ? 'Working' : 'Online') : 'Offline'}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 px-2 py-3">
-            <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted px-2 mb-2">Navigation</div>
+          <nav className={`flex-1 py-3 ${collapsed ? 'px-1' : 'px-2'}`}>
+            {!collapsed && <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted px-2 mb-2">Navigation</div>}
             {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => onViewChange(id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-[11px] transition-colors mb-px border-l ${
+                title={collapsed ? label : undefined}
+                className={`w-full flex items-center ${collapsed ? 'justify-center px-1 py-2' : 'gap-2.5 px-2.5 py-1.5'} text-[11px] transition-colors mb-px ${collapsed ? '' : 'border-l'} ${
                   view === id
-                    ? 'bg-c-surface text-c-text border-c-accent'
-                    : 'text-c-dim hover:bg-c-surface/50 hover:text-c-text border-transparent'
+                    ? `bg-c-surface text-c-text ${collapsed ? '' : 'border-c-accent'}`
+                    : `text-c-dim hover:bg-c-surface/50 hover:text-c-text ${collapsed ? '' : 'border-transparent'}`
                 }`}
               >
-                <Icon size={13} className={view === id ? 'text-c-accent' : 'text-c-muted'} />
-                {label}
-                {view === id && <ChevronRight size={10} className="ml-auto text-c-accent" />}
+                <Icon size={collapsed ? 16 : 13} className={view === id ? 'text-c-accent' : 'text-c-muted'} />
+                {!collapsed && label}
+                {!collapsed && view === id && <ChevronRight size={10} className="ml-auto text-c-accent" />}
               </button>
             ))}
           </nav>
 
           {/* Heartbeat Widget */}
-          <div className="px-3 py-3 border-t border-c-border">
-            <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted mb-2">Heartbeat</div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className={`w-1.5 h-1.5 ${agent.heartbeat.enabled ? 'bg-c-green' : 'bg-c-muted'}`} />
-              <span className="text-[10px] text-c-dim">
-                {agent.heartbeat.enabled ? formatCountdown(agent.heartbeat.nextWake) : 'Disabled'}
-              </span>
-              <button
-                onClick={() => onHeartbeatToggle(!agent.heartbeat.enabled)}
-                className="ml-auto text-[9px] text-c-muted hover:text-c-accent transition-colors uppercase tracking-wider border border-c-border px-1.5 py-0.5"
-              >
-                {agent.heartbeat.enabled ? 'off' : 'on'}
-              </button>
-            </div>
-            <button
-              onClick={onHeartbeatTrigger}
-              className="w-full text-[9px] py-1 border border-c-border text-c-muted hover:text-c-accent hover:border-c-accent/40 transition-colors uppercase tracking-wider"
-            >
-              Trigger Now
-            </button>
+          <div className={`border-t border-c-border ${collapsed ? 'px-1 py-2' : 'px-3 py-3'}`}>
+            {collapsed ? (
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={onHeartbeatTrigger}
+                  title={`Heartbeat: ${agent.heartbeat.enabled ? formatCountdown(agent.heartbeat.nextWake) : 'Disabled'}`}
+                  className="text-c-muted hover:text-c-accent transition-colors p-1"
+                >
+                  <HeartPulse size={14} className={agent.heartbeat.enabled ? 'text-c-green' : 'text-c-muted'} />
+                </button>
+                <button
+                  onClick={toggleSidebar}
+                  className="text-c-muted hover:text-c-accent transition-colors p-1"
+                  title="Expand sidebar"
+                >
+                  <PanelLeftOpen size={13} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted mb-2">Heartbeat</div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className={`w-1.5 h-1.5 ${agent.heartbeat.enabled ? 'bg-c-green' : 'bg-c-muted'}`} />
+                  <span className="text-[10px] text-c-dim">
+                    {agent.heartbeat.enabled ? formatCountdown(agent.heartbeat.nextWake) : 'Disabled'}
+                  </span>
+                  <button
+                    onClick={() => onHeartbeatToggle(!agent.heartbeat.enabled)}
+                    className="ml-auto text-[9px] text-c-muted hover:text-c-accent transition-colors uppercase tracking-wider border border-c-border px-1.5 py-0.5"
+                  >
+                    {agent.heartbeat.enabled ? 'off' : 'on'}
+                  </button>
+                </div>
+                <button
+                  onClick={onHeartbeatTrigger}
+                  className="w-full text-[9px] py-1 border border-c-border text-c-muted hover:text-c-accent hover:border-c-accent/40 transition-colors uppercase tracking-wider"
+                >
+                  Trigger Now
+                </button>
+              </>
+            )}
           </div>
         </aside>
 
@@ -183,6 +246,15 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
         <span className="text-c-border">|</span>
         <span className="text-c-amber">{sessionCost < 0.01 && sessionCost > 0 ? '<$0.01' : `$${sessionCost.toFixed(2)}`}</span>
         <span className="text-c-border">|</span>
+        {onVoiceMode && (
+          <button
+            onClick={onVoiceMode}
+            className="text-c-muted hover:text-c-accent transition-colors"
+            title="Voice mode"
+          >
+            <Mic size={11} />
+          </button>
+        )}
         <button
           onClick={voice.toggleMute}
           className={`flex items-center gap-1 transition-colors ${voice.speaking ? 'text-c-accent' : voice.muted ? 'text-c-muted/50' : 'text-c-muted'}`}
