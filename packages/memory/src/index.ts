@@ -5,7 +5,7 @@ export type { MemoryEntry, NewMemory, ScoredMemory, SearchOpts, MemoryStats } fr
 
 import { resolve } from 'path';
 import { mkdirSync } from 'fs';
-import { getConfig } from '@specter/core';
+import { getConfig } from '@shade/core';
 import { MemoryStore } from './store.js';
 import { startAutoCapture } from './extractor.js';
 

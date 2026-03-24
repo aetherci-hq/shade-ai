@@ -2,11 +2,11 @@ import { resolve } from 'path';
 import { copyFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, initKeys, eventBus, readMemory, writeMemory, loadUserTools } from '@specter/core';
-import { initMemory } from '@specter/memory';
+import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, initKeys, eventBus, readMemory, writeMemory, loadUserTools } from '@shade/core';
+import { initMemory } from '@shade/memory';
 import { createServer } from './http.js';
 import { startTranscriptCapture } from './transcripts.js';
-import { initVoice } from '@specter/voice';
+import { initVoice } from '@shade/voice';
 
 const BASE_DIR = resolve(process.cwd());
 

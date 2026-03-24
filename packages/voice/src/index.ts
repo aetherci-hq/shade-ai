@@ -2,7 +2,7 @@ export { VoiceEngine } from './engine.js';
 export { ElevenLabsClient, ElevenLabsError } from './elevenlabs.js';
 export type { VoiceConfig } from './types.js';
 
-import { getConfig } from '@specter/core';
+import { getConfig } from '@shade/core';
 import { VoiceEngine } from './engine.js';
 import type { VoiceConfig } from './types.js';
 

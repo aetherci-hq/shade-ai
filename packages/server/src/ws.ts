@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
-import type { Agent, HeartbeatDaemon } from '@specter/core';
-import { eventBus, readMemory, writeMemory } from '@specter/core';
+import type { Agent, HeartbeatDaemon } from '@shade/core';
+import { eventBus, readMemory, writeMemory } from '@shade/core';
 import { recordUserMessage } from './transcripts.js';
 
 const clients = new Set<WebSocket>();

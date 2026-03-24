@@ -1,4 +1,4 @@
-import { eventBus, appendTranscript } from '@specter/core';
+import { eventBus, appendTranscript } from '@shade/core';
 
 /**
  * Wire up event listeners that persist chat messages to transcript JSONL files.

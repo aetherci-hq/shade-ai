@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Shade (npm: `shade-ai`, repo: `aetherci-hq/shade-ai`) is a local autonomous AI agent framework. It wraps the Anthropic Claude Agent SDK with persistent memory, a heartbeat daemon, voice output (ElevenLabs), custom tools, and a React dashboard. All config lives in `shade.config.yaml` with hot-reload support.
 
-Previously named Specter — internal workspace package names still use `@specter/*` (not published to npm individually). The published npm package is `shade-ai`.
+Previously named Specter. Internal workspace package names use `@shade/*` (not published to npm individually). The published npm package is `shade-ai`.
 
 ## Commands
 
@@ -66,4 +66,4 @@ The server exposes REST endpoints at `/api/*` (status, config, keys, auth/check,
 
 ### Naming note
 
-The codebase directory may still be named `specter` locally. The GitHub repo is `shade-ai`. Internal package names use `@specter/*` scope (workspace-only, not published). The npm package is `shade-ai`. User-facing text, config files, CLI commands, and log output all use "Shade".
+The local directory may still be named `specter`. The GitHub repo is `shade-ai`. Internal workspace packages use `@shade/*` scope (not published to npm). The npm package is `shade-ai`. User-facing text, config files, CLI commands, and log output all use "Shade".

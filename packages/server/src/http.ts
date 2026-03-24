@@ -6,9 +6,9 @@ import { resolve, dirname } from 'path';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { readdirSync, readFileSync } from 'fs';
-import type { Agent, HeartbeatDaemon, SpecterConfig } from '@specter/core';
-import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, updateConfig, getUsageSummary, getKeyStatuses, setKeys, getUserTools, saveToolConfig, getToolConfigValues, loadUserTools } from '@specter/core';
-import { getMemoryStore } from '@specter/memory';
+import type { Agent, HeartbeatDaemon, SpecterConfig } from '@shade/core';
+import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, updateConfig, getUsageSummary, getKeyStatuses, setKeys, getUserTools, saveToolConfig, getToolConfigValues, loadUserTools } from '@shade/core';
+import { getMemoryStore } from '@shade/memory';
 import { setupWebSocket } from './ws.js';
 
 function formatConfigResponse(cfg: SpecterConfig) {
@@ -102,7 +102,7 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
   // Serve dashboard static files — resolve via npm package location
   let dashboardDist = '';
   try {
-    const dashboardMain = fileURLToPath(import.meta.resolve('@specter/dashboard'));
+    const dashboardMain = fileURLToPath(import.meta.resolve('@shade/dashboard'));
     dashboardDist = dirname(dashboardMain);
   } catch {
     // Fallback: monorepo sibling path

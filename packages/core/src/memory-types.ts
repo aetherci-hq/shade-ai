@@ -1,4 +1,4 @@
-// Shared memory types used by both @specter/core and @specter/memory
+// Shared memory types used by both @shade/core and @shade/memory
 // Defined here to avoid circular dependencies (core cannot depend on memory)
 
 export interface ScoredMemory {

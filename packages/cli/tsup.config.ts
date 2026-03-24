@@ -9,9 +9,9 @@ export default defineConfig({
   clean: true,
   splitting: false,
   sourcemap: false,
-  // Bundle workspace packages (@specter/*) into the output
+  // Bundle workspace packages (@shade/*) into the output
   // Keep npm-published deps and Node built-ins as external
-  noExternal: [/@specter\/.*/],
+  noExternal: [/@shade\/.*/],
   external: [
     // Node built-ins
     'fs', 'path', 'url', 'os', 'events', 'child_process', 'crypto', 'stream',

@@ -1,5 +1,5 @@
 {
-  "name": "@specter/voice",
+  "name": "@shade/voice",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@specter/core": "^0.1.0"
+    "@shade/core": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^18.19.130"

@@ -1,4 +1,4 @@
-import { eventBus } from '@specter/core';
+import { eventBus } from '@shade/core';
 import type { MemoryStore } from './store.js';
 
 const NOISY_TOOLS = new Set(['Read', 'Glob', 'Grep']);

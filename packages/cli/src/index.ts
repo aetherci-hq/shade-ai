@@ -35,7 +35,7 @@ program
   .action(async (opts) => {
     process.env.SHADE_PORT = opts.port;
     if (!opts.heartbeat) process.env.SHADE_NO_HEARTBEAT = '1';
-    await import('@specter/server');
+    await import('@shade/server');
   });
 
 // shade chat

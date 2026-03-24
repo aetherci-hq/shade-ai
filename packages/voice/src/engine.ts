@@ -1,4 +1,4 @@
-import { eventBus } from '@specter/core';
+import { eventBus } from '@shade/core';
 import { ElevenLabsClient, ElevenLabsError } from './elevenlabs.js';
 import type { VoiceConfig } from './types.js';
 
