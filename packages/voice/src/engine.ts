@@ -14,6 +14,7 @@ export class VoiceEngine {
   private disabled = false;
   private speaking = false;
   private hourResetTimer: ReturnType<typeof setInterval> | null = null;
+  private pendingText = '';  // accumulated text from streaming deltas
 
   constructor(config: VoiceConfig) {
     this.client = new ElevenLabsClient(config.apiKey, config.voiceId, config.model);
@@ -24,8 +25,27 @@ export class VoiceEngine {
 
   start(): void {
     if (this.triggers.has('responses')) {
-      eventBus.on('agent:response', ({ text }) => {
-        this.speak(text).catch(err => console.error('[voice] Error:', err));
+      // Accumulate streaming text deltas
+      eventBus.on('agent:text_delta', ({ conversationId, delta }) => {
+        if (conversationId.startsWith('heartbeat')) return;
+        this.pendingText += delta;
+      });
+
+      // When a tool call arrives, speak the accumulated intermediate text block
+      eventBus.on('agent:tool_call', ({ conversationId }) => {
+        if (conversationId.startsWith('heartbeat')) return;
+        this.flushPendingText();
+      });
+
+      // Final response — speak any remaining accumulated text (the last text block)
+      eventBus.on('agent:response', ({ conversationId }) => {
+        if (conversationId.startsWith('heartbeat')) return;
+        this.flushPendingText();
+      });
+
+      // Reset accumulator when agent starts thinking
+      eventBus.on('agent:thinking', () => {
+        this.pendingText = '';
       });
     }
 
@@ -51,10 +71,18 @@ export class VoiceEngine {
     console.log(`[voice] Listening for: ${[...this.triggers].join(', ')}`);
   }
 
+  private flushPendingText(): void {
+    const text = this.pendingText.trim();
+    this.pendingText = '';
+    if (text && text !== 'IDLE') {
+      this.speak(text).catch(err => console.error('[voice] Error:', err));
+    }
+  }
+
   async speak(text: string): Promise<void> {
     if (this.disabled || this.speaking) return;
 
-    const narration = truncateForSpeech(text, 500);
+    const narration = truncateForSpeech(text, 2000);
     if (!narration) return;
 
     // Budget checks
