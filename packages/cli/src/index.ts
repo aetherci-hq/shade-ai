@@ -12,7 +12,7 @@ function baseUrl(opts: { port?: string }): string {
 }
 
 const program = new Command()
-  .name('specter')
+  .name('specter-ai')
   .description('Specter — Lightweight Autonomous AI Agent')
   .version('0.1.0');
 
