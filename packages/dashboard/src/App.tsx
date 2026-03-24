@@ -7,6 +7,7 @@ import { useVoice } from './hooks/useVoice';
 import { authFetch } from './auth';
 import { Volume2, VolumeX, SquarePen } from 'lucide-react';
 import { VoiceMode } from './components/VoiceMode';
+import { HomePanel } from './panels/HomePanel';
 import { ActivityPanel } from './panels/ActivityPanel';
 import { ChatPanel } from './panels/ChatPanel';
 import { MemoryPanel } from './panels/MemoryPanel';
@@ -42,7 +43,7 @@ export function App() {
   const { connected, events, send } = useSocket();
   const agent = useAgent(events);
   const voice = useVoice();
-  const [view, setView] = useState<View>('activity');
+  const [view, setView] = useState<View>('home');
   const [memoryContent, setMemoryContent] = useState<Record<string, string>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState(() => `chat-${Date.now()}`);
@@ -314,7 +315,18 @@ export function App() {
         <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} onVoiceMode={() => setVoiceMode(true)} models={appConfig?.models} />
       }
     >
-      {view === 'activity' && <ActivityPanel events={events} />}
+      {view === 'home' && (
+        <HomePanel
+          agent={agent}
+          connected={connected}
+          events={events}
+          agentName={agentName}
+          startTime={START_TIME}
+          appConfig={appConfig}
+          onNavigate={setView}
+          onChatSend={(msg) => { setView('chat'); handleChatSend(msg); }}
+        />
+      )}
       {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} onVoiceMode={() => setVoiceMode(true)} models={appConfig?.models} />}
       {view === 'heartbeat' && (
         <HeartbeatPanel

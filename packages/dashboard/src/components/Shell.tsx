@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { Activity, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, ChevronLeft, HeartPulse, Fingerprint, Volume2, VolumeX, Mic, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Home, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, ChevronLeft, HeartPulse, Fingerprint, Volume2, VolumeX, Mic, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { AgentState } from '../hooks/useAgent';
 import { authFetch } from '../auth';
 
-export type View = 'activity' | 'chat' | 'heartbeat' | 'persona' | 'memory' | 'tools' | 'config';
+export type View = 'home' | 'chat' | 'heartbeat' | 'persona' | 'memory' | 'tools' | 'config';
 
 interface ShellProps {
   children: ReactNode;
@@ -24,8 +24,8 @@ interface ShellProps {
   onVoiceMode?: () => void;
 }
 
-const NAV_ITEMS: { id: View; label: string; icon: typeof Activity }[] = [
-  { id: 'activity', label: 'Activity', icon: Activity },
+const NAV_ITEMS: { id: View; label: string; icon: typeof Home }[] = [
+  { id: 'home', label: 'Home', icon: Home },
   { id: 'chat', label: 'Chat', icon: MessageSquare },
   { id: 'heartbeat', label: 'Heartbeat', icon: HeartPulse },
   { id: 'persona', label: 'Persona', icon: Fingerprint },
