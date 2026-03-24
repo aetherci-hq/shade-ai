@@ -75,15 +75,25 @@ async function handleClientMessage(
     case 'chat:send': {
       const message = msg.data?.['message'] as string;
       const conversationId = msg.data?.['conversationId'] as string | undefined;
+      const voiceMode = msg.data?.['voiceMode'] as boolean | undefined;
+      const model = msg.data?.['model'] as string | undefined;
       if (message) {
         // Persist user message to transcript
-        if (conversationId) {
-          recordUserMessage(conversationId, message);
+        const convId = conversationId ?? `chat-${Date.now()}`;
+        recordUserMessage(convId, message);
+        // Broadcast user message to ALL clients (so other devices see it)
+        const userMsg = JSON.stringify({
+          type: 'chat:user_message',
+          ts: Date.now(),
+          data: { message, conversationId: convId },
+        });
+        for (const c of clients) {
+          if (c.readyState === 1) c.send(userMsg);
         }
         // Run async — events will stream to client via broadcast
-        agent.run(message, conversationId).catch((err) => {
+        agent.run(message, convId, { voiceMode: voiceMode ?? false, model }).catch((err) => {
           eventBus.emit('agent:error', {
-            conversationId: conversationId ?? 'unknown',
+            conversationId: convId,
             error: err instanceof Error ? err.message : String(err),
           });
         });
@@ -102,7 +112,7 @@ async function handleClientMessage(
       heartbeat.toggle(msg.data?.['enabled'] as boolean);
       break;
     case 'memory:read': {
-      const file = (msg.data?.['file'] as string)?.toUpperCase() as 'MEMORY' | 'HEARTBEAT' | 'SOUL';
+      const file = (msg.data?.['file'] as string)?.toUpperCase() as 'MEMORY' | 'HEARTBEAT' | 'SOUL' | 'HUMAN';
       const content = readMemory(file);
       // Broadcast back as a specific event
       const response = JSON.stringify({
@@ -117,7 +127,7 @@ async function handleClientMessage(
       break;
     }
     case 'memory:write': {
-      const file = (msg.data?.['file'] as string)?.toUpperCase() as 'MEMORY' | 'HEARTBEAT' | 'SOUL';
+      const file = (msg.data?.['file'] as string)?.toUpperCase() as 'MEMORY' | 'HEARTBEAT' | 'SOUL' | 'HUMAN';
       const content = msg.data?.['content'] as string;
       if (file && content !== undefined) {
         writeMemory(file, content);

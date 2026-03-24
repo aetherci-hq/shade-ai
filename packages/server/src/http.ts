@@ -7,14 +7,16 @@ import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { readdirSync, readFileSync } from 'fs';
 import type { Agent, HeartbeatDaemon, SpecterConfig } from '@specter/core';
-import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, updateConfig, getUsageSummary, getKeyStatuses, setKeys } from '@specter/core';
+import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, updateConfig, getUsageSummary, getKeyStatuses, setKeys, getUserTools, saveToolConfig, getToolConfigValues, loadUserTools } from '@specter/core';
 import { getMemoryStore } from '@specter/memory';
 import { setupWebSocket } from './ws.js';
 
 function formatConfigResponse(cfg: SpecterConfig) {
   return {
     name: cfg.name,
+    timezone: cfg.timezone,
     llm: { provider: cfg.llm.provider, model: cfg.llm.model },
+    models: cfg.models,
     agent: {
       maxTurns: cfg.agent.maxTurns,
       maxBudgetUsd: cfg.agent.maxBudgetUsd,
@@ -30,6 +32,11 @@ function formatConfigResponse(cfg: SpecterConfig) {
       ) : {},
     },
     heartbeat: cfg.heartbeat,
+    server: {
+      port: cfg.server.port,
+      host: cfg.server.host,
+      authToken: cfg.server.authToken ? '••••••••' : undefined, // masked
+    },
     tools: { allowed: cfg.tools.allowed, disallowed: cfg.tools.disallowed },
     voice: {
       enabled: cfg.voice.enabled,
@@ -55,6 +62,42 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
 
   await app.register(fastifyCors, { origin: true });
   await app.register(fastifyWebsocket);
+
+  // Auth middleware — if server.authToken is set, protect /api/* routes from remote access
+  const authToken = config.server.authToken;
+  if (authToken) {
+    app.addHook('onRequest', async (req, reply) => {
+      // Skip auth for static files (dashboard), favicon, and the auth check endpoint
+      if (!req.url.startsWith('/api/') && !req.url.startsWith('/ws')) return;
+      if (req.url === '/api/auth/check') return;
+
+      // Skip auth for localhost connections — auth is for remote access
+      const remoteIp = req.ip;
+      const isLocal = remoteIp === '127.0.0.1' || remoteIp === '::1' || remoteIp === '::ffff:127.0.0.1';
+      if (isLocal) return;
+
+      const header = req.headers.authorization;
+      const queryToken = (req.query as Record<string, string>)?.token;
+      const token = header?.replace('Bearer ', '') ?? queryToken;
+
+      if (token !== authToken) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    });
+    console.log(`[specter] Auth enabled — remote access requires token`);
+  }
+
+  // Auth check endpoint — lets the dashboard verify the token
+  app.get('/api/auth/check', async (req) => {
+    if (!authToken) return { required: false };
+    // Localhost doesn't need auth
+    const remoteIp = req.ip;
+    const isLocal = remoteIp === '127.0.0.1' || remoteIp === '::1' || remoteIp === '::ffff:127.0.0.1';
+    if (isLocal) return { required: false };
+    const header = req.headers.authorization;
+    const token = header?.replace('Bearer ', '');
+    return { required: true, valid: token === authToken };
+  });
 
   // Serve dashboard static files — resolve via npm package location
   let dashboardDist = '';
@@ -93,16 +136,16 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
   }));
 
   app.get<{ Params: { file: string } }>('/api/memory/:file', async (req, reply) => {
-    const file = req.params.file.toUpperCase() as 'MEMORY' | 'HEARTBEAT' | 'SOUL';
-    if (!['MEMORY', 'HEARTBEAT', 'SOUL'].includes(file)) {
+    const file = req.params.file.toUpperCase() as 'MEMORY' | 'HEARTBEAT' | 'SOUL' | 'HUMAN';
+    if (!['MEMORY', 'HEARTBEAT', 'SOUL', 'HUMAN'].includes(file)) {
       return reply.code(400).send({ error: 'Invalid file' });
     }
     return { file, content: readMemory(file) };
   });
 
   app.put<{ Params: { file: string }; Body: { content: string } }>('/api/memory/:file', async (req, reply) => {
-    const file = req.params.file.toUpperCase() as 'MEMORY' | 'HEARTBEAT' | 'SOUL';
-    if (!['MEMORY', 'HEARTBEAT', 'SOUL'].includes(file)) {
+    const file = req.params.file.toUpperCase() as 'MEMORY' | 'HEARTBEAT' | 'SOUL' | 'HUMAN';
+    if (!['MEMORY', 'HEARTBEAT', 'SOUL', 'HUMAN'].includes(file)) {
       return reply.code(400).send({ error: 'Invalid file' });
     }
     writeMemory(file, req.body.content);
@@ -127,8 +170,14 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
 
   app.put<{ Body: Record<string, unknown> }>('/api/config', async (req) => {
     const partial = req.body;
-    // Prevent runtime changes to server binding
-    delete partial['server'];
+    // Allow server config changes (persisted to YAML, requires restart to take effect)
+    // Unmask authToken — if it's the masked placeholder, remove it so we don't overwrite with dots
+    if (partial['server']) {
+      const srv = partial['server'] as Record<string, unknown>;
+      if (srv['authToken'] === '••••••••' || srv['authToken'] === '') {
+        delete srv['authToken'];
+      }
+    }
     // Protect memory paths but allow feature flags
     if (partial['memory']) {
       const mem = partial['memory'] as Record<string, unknown>;
@@ -155,6 +204,9 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
   });
 
   app.get('/api/tools', async () => {
+    // Re-scan tools directory on every request so new tools appear immediately
+    loadUserTools();
+
     const cfg = getConfig();
     const registered = cfg.tools.allowed.map(t => ({
       name: t,
@@ -192,7 +244,10 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
       }
     } catch {}
 
-    return { registered, userTools, workspaceFiles };
+    // Parsed custom tools (with metadata)
+    const customTools = getUserTools();
+
+    return { registered, userTools, workspaceFiles, customTools };
   });
 
   app.get<{ Params: { filename: string } }>('/api/tools/:filename', async (req, reply) => {
@@ -202,6 +257,18 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
       return reply.code(404).send({ error: 'Tool not found' });
     }
     return { filename: req.params.filename, content: readFileSync(filePath, 'utf-8') };
+  });
+
+  // Tool config — save setup values and reload tools
+  app.get<{ Params: { name: string } }>('/api/tools/config/:name', async (req) => {
+    return getToolConfigValues(req.params.name);
+  });
+
+  app.put<{ Params: { name: string }; Body: Record<string, string> }>('/api/tools/config/:name', async (req) => {
+    saveToolConfig(req.params.name, req.body);
+    // Reload tools so configured status updates
+    loadUserTools();
+    return { ok: true };
   });
 
   app.get<{ Params: { filename: string } }>('/api/workspace/:filename', async (req, reply) => {

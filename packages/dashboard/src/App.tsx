@@ -1,8 +1,12 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { Shell, type View } from './components/Shell';
 import { useSocket } from './hooks/useSocket';
 import { useAgent } from './hooks/useAgent';
 import { useVoice } from './hooks/useVoice';
+import { authFetch } from './auth';
+import { Volume2, VolumeX, SquarePen } from 'lucide-react';
+import { VoiceMode } from './components/VoiceMode';
 import { ActivityPanel } from './panels/ActivityPanel';
 import { ChatPanel } from './panels/ChatPanel';
 import { MemoryPanel } from './panels/MemoryPanel';
@@ -23,6 +27,7 @@ interface ChatMessage {
 export interface AppConfig {
   name: string;
   llm: { provider: string; model: string };
+  models?: { default: string; advanced: string; heartbeat: string };
   agent: {
     maxTurns: number;
     maxBudgetUsd?: number;
@@ -45,13 +50,16 @@ export function App() {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [chatLoaded, setChatLoaded] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
 
   // Track streaming assistant message
   const streamingRef = useRef<{ ts: number; content: string } | null>(null);
+  // Track last message we sent (to avoid duplicating our own user message from broadcast)
+  const lastSentRef = useRef<string>('');
 
   // Fetch config on mount
   useEffect(() => {
-    fetch('/api/config')
+    authFetch('/api/config')
       .then(r => r.json())
       .then(setAppConfig)
       .catch(() => {});
@@ -60,14 +68,14 @@ export function App() {
   // Resume last chat conversation on mount
   useEffect(() => {
     if (chatLoaded) return;
-    fetch('/api/conversations?limit=10')
+    authFetch('/api/conversations?limit=10')
       .then(r => r.json())
       .then((conversations: Array<{ id: string; messageCount: number; lastActivity: number }>) => {
         // Find the most recent non-heartbeat chat conversation
         const lastChat = conversations.find(c => c.id.startsWith('chat-'));
         if (!lastChat) { setChatLoaded(true); return; }
 
-        return fetch(`/api/conversations/${lastChat.id}`)
+        return authFetch(`/api/conversations/${lastChat.id}`)
           .then(r => r.json())
           .then((data: { id: string; messages: Array<{ role: string; content: string; ts: number; type?: string }> }) => {
             const restored: ChatMessage[] = [];
@@ -100,6 +108,16 @@ export function App() {
       const evtConvId = evt.data['conversationId'] as string | undefined;
       if (evtConvId && evtConvId.startsWith('heartbeat')) continue;
 
+      // User message from another device — add it if we didn't send it
+      if (evt.type === 'chat:user_message') {
+        const msg = evt.data['message'] as string;
+        if (msg !== lastSentRef.current) {
+          setChatMessages(prev => [...prev, { role: 'user', content: msg, ts: evt.ts }]);
+        }
+        lastSentRef.current = ''; // clear after check
+        continue;
+      }
+
       if (evt.type === 'agent:text_delta') {
         const delta = evt.data['delta'] as string;
         if (!streamingRef.current) {
@@ -122,8 +140,9 @@ export function App() {
         }
       }
       if (evt.type === 'agent:response') {
-        const text = evt.data['text'] as string;
+        // Finalize the streaming message if one exists
         if (streamingRef.current) {
+          const text = evt.data['text'] as string;
           const streamTs = streamingRef.current.ts;
           streamingRef.current = null;
           setChatMessages(prev => {
@@ -137,10 +156,14 @@ export function App() {
             return updated;
           });
         } else {
-          setChatMessages(prev => [...prev, { role: 'assistant', content: text, ts: evt.ts }]);
+          // No active stream — text was already delivered via deltas before tool calls.
+          // Don't create a duplicate message. Just reset state.
+          streamingRef.current = null;
         }
       }
       if (evt.type === 'agent:tool_call') {
+        // Tool call arrived — pause streaming accumulation but DON'T discard the ref entirely.
+        // Mark it as paused so new text_delta events after tools create a fresh message.
         streamingRef.current = null;
         setChatMessages(prev => [...prev, {
           role: 'tool' as const,
@@ -166,7 +189,7 @@ export function App() {
 
   // Reload all memory files from disk
   const refreshAllMemory = useCallback(() => {
-    for (const file of ['MEMORY', 'HEARTBEAT', 'SOUL']) {
+    for (const file of ['MEMORY', 'HEARTBEAT', 'SOUL', 'HUMAN']) {
       fetch(`/api/memory/${file}`)
         .then(r => r.json())
         .then(data => {
@@ -192,9 +215,20 @@ export function App() {
     lastProcessedRef.current = events.length;
   }, [events.length]);
 
-  const handleChatSend = useCallback((message: string) => {
+  const handleChatSend = useCallback((message: string, model?: string) => {
+    // flushSync ensures the user message is committed to state BEFORE
+    // the WebSocket send, preventing race conditions where the agent's
+    // response arrives and renders before the user's own message.
+    lastSentRef.current = message;
+    flushSync(() => {
+      setChatMessages(prev => [...prev, { role: 'user', content: message, ts: Date.now() }]);
+    });
+    send('chat:send', { message, conversationId, model });
+  }, [send, conversationId]);
+
+  const handleVoiceSend = useCallback((message: string) => {
     setChatMessages(prev => [...prev, { role: 'user', content: message, ts: Date.now() }]);
-    send('chat:send', { message, conversationId });
+    send('chat:send', { message, conversationId, voiceMode: true });
   }, [send, conversationId]);
 
   const handleMemoryLoad = useCallback((file: string) => {
@@ -219,7 +253,49 @@ export function App() {
     send('heartbeat:toggle', { enabled });
   }, [send]);
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ─── Mobile Layout: full-screen chat with agent ───
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen w-screen bg-c-bg grain">
+        <div className="h-px w-full bg-c-accent opacity-30 shrink-0" />
+        <div className="flex-1 min-h-0 flex flex-col">
+          <ChatPanel
+            messages={chatMessages}
+            onSend={handleChatSend}
+            onNewChat={handleNewChat}
+            isRunning={agent.isRunning}
+            agentName={agentName}
+            voice={voice}
+            onVoiceMode={() => setVoiceMode(true)}
+            models={appConfig?.models}
+          />
+        </div>
+        {voiceMode && (
+          <VoiceMode
+            agentName={agentName}
+            isRunning={agent.isRunning}
+            speaking={voice.speaking}
+            muted={voice.muted}
+            onToggleMute={voice.toggleMute}
+            onSend={handleVoiceSend}
+            onClose={() => setVoiceMode(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ─── Desktop Layout: full dashboard ───
   return (
+    <>
     <Shell
       view={view}
       onViewChange={setView}
@@ -233,12 +309,13 @@ export function App() {
       focusMode={focusMode}
       onFocusModeToggle={setFocusMode}
       voice={voice}
+      onVoiceMode={() => setVoiceMode(true)}
       focusChatPanel={
-        <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} />
+        <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} onVoiceMode={() => setVoiceMode(true)} models={appConfig?.models} />
       }
     >
       {view === 'activity' && <ActivityPanel events={events} />}
-      {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} />}
+      {view === 'chat' && <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} onVoiceMode={() => setVoiceMode(true)} models={appConfig?.models} />}
       {view === 'heartbeat' && (
         <HeartbeatPanel
           agent={agent}
@@ -270,5 +347,17 @@ export function App() {
         </div>
       )}
     </Shell>
+    {voiceMode && (
+      <VoiceMode
+        agentName={agentName}
+        isRunning={agent.isRunning}
+        speaking={voice.speaking}
+        muted={voice.muted}
+        onToggleMute={voice.toggleMute}
+        onSend={handleVoiceSend}
+        onClose={() => setVoiceMode(false)}
+      />
+    )}
+    </>
   );
 }

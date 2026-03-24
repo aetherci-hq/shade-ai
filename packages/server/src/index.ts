@@ -1,5 +1,8 @@
 import { resolve } from 'path';
-import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, initKeys, eventBus } from '@specter/core';
+import { copyFileSync, existsSync, mkdirSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, initKeys, eventBus, readMemory, writeMemory, loadUserTools } from '@specter/core';
 import { initMemory } from '@specter/memory';
 import { createServer } from './http.js';
 import { startTranscriptCapture } from './transcripts.js';
@@ -38,7 +41,26 @@ async function main() {
     console.log(`[specter] Voice enabled (ElevenLabs)`);
   }
 
-  // 6. Create agent (now wraps Claude Agent SDK)
+  // 6. Load custom tools and install runner
+  const userTools = loadUserTools();
+  if (userTools.length > 0) {
+    console.log(`[specter] Custom tools loaded: ${userTools.map(t => t.name).join(', ')}`);
+  }
+  // Copy tool runner to tools directory so agent can invoke it via Bash
+  const toolsDir = config.tools.userDir;
+  mkdirSync(toolsDir, { recursive: true });
+  try {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const runnerSrc = resolve(__dirname, '../src/tool-runner.ts');
+    // Fallback: look in the core package
+    const coreSrc = resolve(__dirname, '../../core/src/tool-runner.ts');
+    const src = existsSync(runnerSrc) ? runnerSrc : coreSrc;
+    if (existsSync(src)) {
+      copyFileSync(src, resolve(toolsDir, '_run.ts'));
+    }
+  } catch { /* runner copy is best-effort */ }
+
+  // 7. Create agent (now wraps Claude Agent SDK)
   const agent = new Agent();
 
   // 5. Create heartbeat daemon
@@ -54,9 +76,19 @@ async function main() {
   }
 
   // 8. Hot-reload: apply config changes to running components
-  eventBus.on('config:updated', ({ fields }) => {
+  eventBus.on('config:updated', ({ fields, oldName, newName }) => {
     const cfg = getConfig();
     console.log(`[specter] Config updated: ${fields.join(', ')}`);
+
+    // Auto-sync agent name in SOUL.md when config name changes
+    if (oldName && newName && oldName !== newName) {
+      const soul = readMemory('SOUL');
+      const updated = soul.replaceAll(`You are ${oldName}`, `You are ${newName}`);
+      if (updated !== soul) {
+        writeMemory('SOUL', updated);
+        console.log(`[specter] SOUL.md updated: "${oldName}" → "${newName}"`);
+      }
+    }
 
     // Hot-reload heartbeat settings
     if (fields.includes('heartbeat')) {
@@ -79,7 +111,7 @@ async function main() {
       console.log(`[specter] Session ${d['sessionId']} initialized`);
     } else if (event === 'agent:subagent') {
       console.log(`[specter] Subagent ${d['status']}: ${d['description']}`);
-    } else if (event !== 'stats:usage' && event !== 'agent:text_delta') {
+    } else if (event !== 'stats:usage' && event !== 'agent:text_delta' && event !== 'voice:audio' && event !== 'voice:done') {
       console.log(`[specter] ${event}`);
     }
   });

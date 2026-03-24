@@ -1,8 +1,12 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { eventBus } from './events.js';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
 import { readMemory, appendActivity } from './memory.js';
 import { getConfig } from './config.js';
+import { loadUserTools, getToolPromptSection } from './tools.js';
 import type { ScoredMemory } from './memory-types.js';
+import type { HeartbeatState } from './types.js';
 
 // Optional memory store — set via setMemoryStore() from server init
 let memoryStore: MemoryStoreLike | null = null;
@@ -40,17 +44,22 @@ export class Agent {
     return this.sessionId;
   }
 
-  async run(input: string, conversationId?: string): Promise<string> {
+  async run(input: string, conversationId?: string, opts?: { voiceMode?: boolean; model?: string }): Promise<string> {
     const config = getConfig();
     const convId = conversationId ?? 'default';
     this.running = true;
     this.abortController = new AbortController();
 
     const soul = readMemory('SOUL');
+    const human = readMemory('HUMAN');
     const manualMemory = readMemory('MEMORY');
 
     // Build system prompt with memory context
-    let systemPrompt = soul;
+    const now = new Date().toLocaleString('en-US', { timeZone: config.timezone, dateStyle: 'full', timeStyle: 'short' });
+    let systemPrompt = soul + `\n\n## Current Context\nTimezone: ${config.timezone}\nCurrent time: ${now}`;
+    if (human.trim()) {
+      systemPrompt += '\n\n## About the User\n' + human;
+    }
     if (manualMemory.trim()) {
       systemPrompt += '\n\n## Notes\n' + manualMemory;
     }
@@ -65,8 +74,38 @@ export class Agent {
       }
     }
 
+    // Re-scan and inject custom tool descriptions
+    loadUserTools();
+    const toolSection = getToolPromptSection();
+    if (toolSection) {
+      systemPrompt += toolSection;
+    }
+
+    // Inject recent heartbeat context for non-heartbeat conversations
+    if (!convId.startsWith('heartbeat')) {
+      try {
+        const statePath = resolve(config.memory.stateDir, 'heartbeat.json');
+        if (existsSync(statePath)) {
+          const hbState: HeartbeatState = JSON.parse(readFileSync(statePath, 'utf-8'));
+          // Only inject if heartbeat ran within the last 2 hours and actually did something
+          const ageMs = Date.now() - hbState.lastRun;
+          if (ageMs < 2 * 60 * 60 * 1000 && hbState.decision === 'acted' && hbState.summary) {
+            const ago = ageMs < 60000 ? 'just now' :
+                        ageMs < 3600000 ? `${Math.floor(ageMs / 60000)}m ago` :
+                        `${Math.floor(ageMs / 3600000)}h ago`;
+            systemPrompt += `\n\n## Recent Heartbeat Activity\nYour heartbeat ran ${ago} and took action. Summary:\n${hbState.summary.slice(0, 500)}\nMention this proactively if relevant to what the user is asking.`;
+          }
+        }
+      } catch { /* heartbeat state not available — skip */ }
+    }
+
+    // Voice mode: append conversational style modifier
+    if (opts?.voiceMode) {
+      systemPrompt += '\n\n## Voice Mode\nThe user is speaking to you by voice. Respond conversationally in 1-2 sentences. Be concise, warm, and natural. No markdown, no code blocks, no lists, no formatting. Speak as you would to a friend.';
+    }
+
     try {
-      return await this.executeQuery(input, convId, systemPrompt, config, false);
+      return await this.executeQuery(input, convId, systemPrompt, config, false, 0, opts?.model);
     } finally {
       this.running = false;
     }
@@ -83,6 +122,7 @@ export class Agent {
     config: ReturnType<typeof getConfig>,
     isContinuation: boolean,
     continuationCount = 0,
+    modelOverride?: string,
   ): Promise<string> {
     const q = query({
       prompt: isContinuation ? 'Continue where you left off. Complete the task.' : input,
@@ -99,7 +139,7 @@ export class Agent {
         abortController: this.abortController,
         resume: this.sessionId,
         continue: isContinuation,
-        model: config.llm.model,
+        model: modelOverride ?? config.models?.default ?? config.llm.model,
         agents: config.agent.subagents ? Object.fromEntries(
           Object.entries(config.agent.subagents).map(([name, def]) => [name, {
             description: def.description,
@@ -239,7 +279,7 @@ export class Agent {
               // Auto-continue: resume the session where it left off
               eventBus.emit('agent:thinking', { conversationId });
               appendActivity({ type: 'continuation', conversationId, attempt: continuationCount + 1 });
-              return await this.executeQuery(input, conversationId, systemPrompt, config, true, continuationCount + 1);
+              return await this.executeQuery(input, conversationId, systemPrompt, config, true, continuationCount + 1, modelOverride);
             } else {
               const errors = (message as { errors?: string[] }).errors;
               const errorMsg = errors?.join(', ') || message.subtype;
