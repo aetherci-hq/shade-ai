@@ -14,6 +14,8 @@ There are other open-source AI agents. Here's why we built this one.
 
 **Your costs, visible.** Shade shows you exactly what you're spending. Budget forecasting, per-model cost tiers (haiku for heartbeat checks, sonnet for chat, opus when you need it), daily cost charts, and per-conversation tracking. The heartbeat daemon defaults to the cheapest model because checking "anything to do?" shouldn't cost $0.15 every 30 minutes.
 
+**Dashboard-first, not dashboard-optional.** The agent's internals aren't hidden behind config files you have to hunt for. Persona, memory, standing orders, tools, cost tracking, model selection — it's all in the dashboard, editable live, with changes that persist to YAML and hot-reload without restarting. Full transparency is a design principle, not an afterthought. You should see exactly what your agent knows, what it costs, and what it's doing at all times.
+
 **Guardrails included.** Blocked commands (`rm -rf /`, `format`, `shutdown`), blocked filesystem paths, per-query budget caps, configurable permission modes, voice cost caps, and auth tokens for remote access. The agent is powerful — the guardrails make sure it stays within bounds you set.
 
 ---
