@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Zap, Play, Pause, ChevronDown, ChevronRight, Clock, Activity, Terminal } from 'lucide-react';
+import { Zap, Play, Pause, ChevronDown, ChevronRight, Clock, Activity, Terminal, Plus, BookTemplate } from 'lucide-react';
 import type { SocketEvent } from '../hooks/useSocket';
 import type { AgentState } from '../hooks/useAgent';
 
@@ -295,6 +295,46 @@ function TimelineEntry({ cycle, isFirst }: { cycle: HeartbeatCycle; isFirst: boo
   );
 }
 
+// ─── Standing Order Templates ───────────────────────────────────────
+
+const TEMPLATES: { name: string; description: string; content: string }[] = [
+  {
+    name: 'Inbox Triage',
+    description: 'Scan for urgent items across inboxes',
+    content: '- Quick scan: anything urgent in recent activity? Flag critical items and summarize.',
+  },
+  {
+    name: 'Daily Brief',
+    description: 'Morning summary of what matters today',
+    content: '- If morning (before 10am): prepare a daily brief — weather, calendar events, pending tasks, anything that needs attention today.',
+  },
+  {
+    name: 'URL Monitor',
+    description: 'Check a URL for changes',
+    content: '- Monitor URL: [URL_HERE] — fetch it, compare to last known state in MEMORY.md. If changed, note the diff and alert.',
+  },
+  {
+    name: 'Git Repository Check',
+    description: 'Check repos for new PRs, issues, or CI failures',
+    content: '- Check git repos for new pull requests, open issues, or failed CI runs. Summarize anything that needs attention.',
+  },
+  {
+    name: 'System Health',
+    description: 'Check disk, memory, and running processes',
+    content: '- Run system health check: disk space, memory usage, CPU load. Flag if anything is above 85% utilization.',
+  },
+  {
+    name: 'Log Watcher',
+    description: 'Scan log files for errors or anomalies',
+    content: '- Scan log files in [LOG_DIR] for errors, warnings, or anomalies since last check. Summarize findings.',
+  },
+  {
+    name: 'Stale Task Cleanup',
+    description: 'Review and clean up old tasks and notes',
+    content: '- Review MEMORY.md for stale entries older than 7 days. Archive or remove anything no longer relevant. Keep it clean.',
+  },
+];
+
 // ─── Standing Orders Card ───────────────────────────────────────────
 
 function StandingOrders({ content, onSave, onLoad }: {
@@ -304,6 +344,7 @@ function StandingOrders({ content, onSave, onLoad }: {
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(content);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   useEffect(() => { onLoad(); }, [onLoad]);
   useEffect(() => { if (!editing) setDraft(content); }, [content, editing]);
@@ -318,26 +359,36 @@ function StandingOrders({ content, onSave, onLoad }: {
     setEditing(false);
   };
 
+  const handleAddTemplate = (template: typeof TEMPLATES[0]) => {
+    const current = content.trim();
+    const header = current.includes('# Standing Orders') ? '' : '# Standing Orders\n\n';
+    const newContent = current
+      ? current + '\n' + template.content
+      : header + template.content;
+    onSave(newContent);
+    setShowTemplates(false);
+  };
+
   if (editing) {
     return (
       <div className="space-y-2">
         <textarea
           value={draft}
           onChange={e => setDraft(e.target.value)}
-          className="w-full bg-c-surface border border-c-border text-c-text text-[11px] p-2 outline-none resize-none font-mono"
-          style={{ minHeight: 120, caretColor: 'var(--color-c-accent)' }}
+          className="w-full bg-c-surface border border-c-border text-c-text text-[12px] p-3 outline-none resize-none font-mono leading-relaxed"
+          style={{ minHeight: 150, caretColor: 'var(--color-c-accent)' }}
           autoFocus
         />
         <div className="flex gap-2">
           <button
             onClick={handleSave}
-            className="text-[10px] px-3 py-1 border border-c-accent text-c-accent uppercase tracking-wider font-medium hover:bg-c-accent/10 transition-colors"
+            className="text-[11px] px-3 py-1 border border-c-accent text-c-accent uppercase tracking-wider font-medium hover:bg-c-accent/10 transition-colors"
           >
             Save
           </button>
           <button
             onClick={() => { setEditing(false); setDraft(content); }}
-            className="text-[10px] px-3 py-1 border border-c-border text-c-muted uppercase tracking-wider hover:text-c-text transition-colors"
+            className="text-[11px] px-3 py-1 border border-c-border text-c-muted uppercase tracking-wider hover:text-c-text transition-colors"
           >
             Cancel
           </button>
@@ -348,26 +399,57 @@ function StandingOrders({ content, onSave, onLoad }: {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[9px] font-medium uppercase tracking-[0.15em] text-c-muted flex items-center gap-1.5">
-          <Terminal size={10} />
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-c-muted flex items-center gap-1.5">
+          <Terminal size={11} />
           Standing Orders
         </div>
-        <button
-          onClick={() => setEditing(true)}
-          className="text-[9px] text-c-muted hover:text-c-accent transition-colors uppercase tracking-wider border border-c-border px-1.5 py-0.5 hover:border-c-accent/30"
-        >
-          Edit
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowTemplates(!showTemplates)}
+            className="text-[10px] text-c-muted hover:text-c-accent transition-colors uppercase tracking-wider border border-c-border px-2 py-0.5 hover:border-c-accent/30 flex items-center gap-1"
+          >
+            <Plus size={9} /> Template
+          </button>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-[10px] text-c-muted hover:text-c-accent transition-colors uppercase tracking-wider border border-c-border px-2 py-0.5 hover:border-c-accent/30"
+          >
+            Edit
+          </button>
+        </div>
       </div>
+
+      {/* Template picker */}
+      {showTemplates && (
+        <div className="mb-3 space-y-1.5 animate-fade-in">
+          <div className="text-[11px] text-c-dim mb-2">Add a pre-built standing order:</div>
+          {TEMPLATES.map(t => (
+            <button
+              key={t.name}
+              onClick={() => handleAddTemplate(t)}
+              className="w-full text-left bg-c-surface border border-c-border p-2.5 hover:border-c-accent/25 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-c-text font-medium group-hover:text-c-accent transition-colors">{t.name}</span>
+                <Plus size={10} className="text-c-muted group-hover:text-c-accent transition-colors" />
+              </div>
+              <div className="text-[11px] text-c-dim mt-0.5">{t.description}</div>
+            </button>
+          ))}
+        </div>
+      )}
+
       {orders.length === 0 ? (
-        <div className="text-c-muted text-[11px]">No standing orders. Click edit to add tasks.</div>
+        <div className="text-c-muted text-[12px] bg-c-surface border border-c-border p-3">
+          No standing orders yet. Add a template above or click Edit to write your own.
+        </div>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {orders.map((order, i) => (
-            <div key={i} className="flex gap-2 text-[11px] py-0.5">
+            <div key={i} className="flex gap-2 text-[12px] py-0.5">
               <span className="text-c-accent shrink-0">-</span>
-              <span className="text-c-dim">{order}</span>
+              <span className="text-c-dim">{order.replace(/^[-*]\s*/, '')}</span>
             </div>
           ))}
         </div>
