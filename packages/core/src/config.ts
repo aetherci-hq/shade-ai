@@ -24,7 +24,13 @@ function loadDotenv(baseDir: string): void {
 
 const DEFAULTS: SpecterConfig = {
   name: 'Specter',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   llm: { provider: 'claude', model: 'claude-sonnet-4-20250514', maxTokens: 4096 },
+  models: {
+    default: 'claude-sonnet-4-20250514',
+    advanced: 'claude-opus-4-20250514',
+    heartbeat: 'haiku',
+  },
   agent: {
     maxTurns: 25,
     permissionMode: 'bypassPermissions',
@@ -43,7 +49,7 @@ const DEFAULTS: SpecterConfig = {
       },
     },
   },
-  heartbeat: { enabled: true, intervalMinutes: 15 },
+  heartbeat: { enabled: true, intervalMinutes: 15, model: 'haiku' },
   server: { port: 3700, host: '127.0.0.1' },
   memory: { dir: '.', stateDir: './state', embedModel: 'Xenova/all-MiniLM-L6-v2', autoCapture: true, maxEntries: 10000, contextLimit: 8 },
   tools: {
@@ -104,6 +110,48 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
 
 let _config: SpecterConfig | null = null;
 let _baseDir: string = '';
+let _envVarRefs: Map<string, string> = new Map(); // dotpath → original "${VAR}" string
+
+/**
+ * Scan an object for string values containing ${...} env var references.
+ * Records them as dotpath → original value so we can restore on write.
+ */
+function collectEnvVarRefs(obj: unknown, prefix = ''): void {
+  if (typeof obj === 'string') {
+    if (/\$\{\w+\}/.test(obj)) {
+      _envVarRefs.set(prefix, obj);
+    }
+    return;
+  }
+  if (Array.isArray(obj)) {
+    obj.forEach((item, i) => collectEnvVarRefs(item, `${prefix}.${i}`));
+    return;
+  }
+  if (obj && typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      collectEnvVarRefs(v, prefix ? `${prefix}.${k}` : k);
+    }
+  }
+}
+
+/**
+ * Restore env var references in a writeable config object before persisting to YAML.
+ */
+function restoreEnvVarRefs(obj: Record<string, unknown>): void {
+  for (const [dotpath, original] of _envVarRefs) {
+    const parts = dotpath.split('.');
+    let target: Record<string, unknown> = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const next = target[parts[i]];
+      if (!next || typeof next !== 'object') break;
+      target = next as Record<string, unknown>;
+    }
+    const lastKey = parts[parts.length - 1];
+    if (lastKey in target) {
+      target[lastKey] = original;
+    }
+  }
+}
 
 export function loadConfig(baseDir: string): SpecterConfig {
   if (_config) return _config;
@@ -117,6 +165,10 @@ export function loadConfig(baseDir: string): SpecterConfig {
     const raw = readFileSync(configPath, 'utf-8');
     userConfig = (parseYaml(raw) as Record<string, unknown>) ?? {};
   }
+
+  // Collect env var references before interpolation so we can restore them on write
+  _envVarRefs = new Map();
+  collectEnvVarRefs(userConfig);
 
   const interpolated = deepInterpolate(userConfig) as Record<string, unknown>;
   const merged = deepMerge(DEFAULTS as unknown as Record<string, unknown>, interpolated);
@@ -139,6 +191,8 @@ export function getConfig(): SpecterConfig {
 /** Apply partial config updates, persist to YAML, and emit config:updated */
 export function updateConfig(partial: Record<string, unknown>): SpecterConfig {
   if (!_config) throw new Error('Config not loaded. Call loadConfig() first.');
+
+  const oldName = _config.name;
 
   // Deep merge partial into current config
   const updated = deepMerge(_config as unknown as Record<string, unknown>, partial) as unknown as SpecterConfig;
@@ -165,13 +219,17 @@ export function updateConfig(partial: Record<string, unknown>): SpecterConfig {
     tools['userDir'] = relativeTo(_baseDir, updated.tools.userDir);
   }
 
-  // Remove server config from writes (not hot-reloadable)
-  delete writeable['server'];
+  // Restore env var references (e.g., ${ELEVENLABS_API_KEY}) so they survive writes
+  restoreEnvVarRefs(writeable);
 
   writeFileSync(configPath, stringifyYaml(writeable, { lineWidth: 120 }), 'utf-8');
 
-  // Emit event with list of changed top-level fields
-  eventBus.emit('config:updated', { fields: Object.keys(partial) });
+  // Emit event with list of changed top-level fields (include old name if it changed)
+  const nameChanged = typeof partial['name'] === 'string' && partial['name'] !== oldName;
+  eventBus.emit('config:updated', {
+    fields: Object.keys(partial),
+    ...(nameChanged ? { oldName, newName: _config.name } : {}),
+  });
 
   return _config;
 }

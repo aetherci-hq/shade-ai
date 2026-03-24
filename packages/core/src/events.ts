@@ -13,7 +13,7 @@ export interface SpecterEvents {
   'heartbeat:sleep': { nextWake: number };
   'memory:updated': { file: string };
   'guardrail:flag': { reason: string; detail: string };
-  'config:updated': { fields: string[] };
+  'config:updated': { fields: string[]; oldName?: string; newName?: string };
   'stats:usage': { inputTokens: number; outputTokens: number; costUsd?: number };
   'session:init': { sessionId: string; tools: string[]; model: string };
   'voice:audio': { chunk: Buffer };

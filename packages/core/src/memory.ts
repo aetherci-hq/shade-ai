@@ -3,7 +3,7 @@ import { resolve, dirname, basename } from 'path';
 import { getConfig } from './config.js';
 import { eventBus } from './events.js';
 
-type MemoryFile = 'MEMORY' | 'HEARTBEAT' | 'SOUL';
+type MemoryFile = 'MEMORY' | 'HEARTBEAT' | 'SOUL' | 'HUMAN';
 
 function filePath(file: MemoryFile): string {
   const config = getConfig();

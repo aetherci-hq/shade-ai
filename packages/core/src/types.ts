@@ -20,10 +20,17 @@ export interface AgentDefinition {
 
 export interface SpecterConfig {
   name: string;
+  timezone: string;
   llm: {
-    provider: string;
+    provider: string;       // 'claude' | 'local' (local LLM support planned)
     model: string;
     maxTokens: number;
+    baseUrl?: string;       // For local LLM: OpenAI-compatible endpoint (e.g. http://localhost:11434/v1)
+  };
+  models: {
+    default: string;
+    advanced: string;
+    heartbeat: string;
   };
   agent: {
     maxTurns: number;
@@ -34,10 +41,12 @@ export interface SpecterConfig {
   heartbeat: {
     enabled: boolean;
     intervalMinutes: number;
+    model?: string;
   };
   server: {
     port: number;
     host: string;
+    authToken?: string;     // API key for remote access. If set, all routes require Authorization header.
   };
   memory: {
     dir: string;
