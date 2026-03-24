@@ -1,8 +1,10 @@
 {
-  "name": "@specter/cli",
+  "name": "specter-ai",
   "version": "0.1.0",
+  "description": "Specter — Lightweight Autonomous AI Agent",
   "type": "module",
   "bin": {
+    "specter-ai": "dist/index.js",
     "specter": "dist/index.js"
   },
   "scripts": {
@@ -10,10 +12,16 @@
     "dev": "tsx src/index.ts"
   },
   "files": ["dist"],
+  "keywords": ["ai", "agent", "autonomous", "claude", "specter", "personal-assistant"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aetherci-hq/specter"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@specter/core": "*",
-    "@specter/server": "*",
+    "@specter/core": "^0.1.0",
+    "@specter/server": "^0.1.0",
     "chalk": "^5.4.0",
     "commander": "^13.0.0"
   },

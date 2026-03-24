@@ -4,15 +4,23 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@specter/core": "*"
+    "@specter/core": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^18.19.130"
-  }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aetherci-hq/specter"
+  },
+  "description": "Specter voice package"
 }
