@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'specter_auth_token';
+const TOKEN_KEY = 'shade_auth_token';
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);

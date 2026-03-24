@@ -229,7 +229,7 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
 
     // Scan workspace root for agent-created files (non-config, non-system)
     const IGNORE = new Set(['node_modules', 'dist', 'packages', 'state', 'tools', '.git', '.env', '.env.example']);
-    const IGNORE_FILES = new Set(['package.json', 'package-lock.json', 'tsconfig.base.json', 'specter.config.yaml', '.gitignore', 'agent.json']);
+    const IGNORE_FILES = new Set(['package.json', 'package-lock.json', 'tsconfig.base.json', 'shade.config.yaml', '.gitignore', 'agent.json']);
     const workspaceFiles: { name: string; size: number }[] = [];
     try {
       const entries = readdirSync(resolve(config.memory.dir), { withFileTypes: true });

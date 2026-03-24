@@ -13,11 +13,11 @@ const BASE_DIR = resolve(process.cwd());
 async function main() {
   // 1. Load config
   const config = loadConfig(BASE_DIR);
-  console.log(`[specter] Config loaded from ${BASE_DIR}`);
-  console.log(`[specter] Model: ${config.llm.model}`);
-  console.log(`[specter] Tools: ${config.tools.allowed.join(', ')}`);
+  console.log(`[shade] Config loaded from ${BASE_DIR}`);
+  console.log(`[shade] Model: ${config.llm.model}`);
+  console.log(`[shade] Tools: ${config.tools.allowed.join(', ')}`);
   if (config.agent.maxBudgetUsd) {
-    console.log(`[specter] Budget cap: $${config.agent.maxBudgetUsd}`);
+    console.log(`[shade] Budget cap: $${config.agent.maxBudgetUsd}`);
   }
 
   // 2. Initialize key management
@@ -25,12 +25,12 @@ async function main() {
 
   // 3. Initialize persistent usage tracker
   initUsageTracker();
-  console.log(`[specter] Usage tracker initialized (~/.specter/usage.json)`);
+  console.log(`[shade] Usage tracker initialized (~/.shade/usage.json)`);
 
   // 3. Initialize persistent memory
   const memoryStore = await initMemory();
   setMemoryStore(memoryStore);
-  console.log(`[specter] Memory initialized (auto-capture: ${config.memory.autoCapture})`);
+  console.log(`[shade] Memory initialized (auto-capture: ${config.memory.autoCapture})`);
 
   // 4. Start transcript capture
   startTranscriptCapture();
@@ -38,13 +38,13 @@ async function main() {
   // 5. Initialize voice engine
   const voiceEngine = initVoice();
   if (voiceEngine) {
-    console.log(`[specter] Voice enabled (ElevenLabs)`);
+    console.log(`[shade] Voice enabled (ElevenLabs)`);
   }
 
   // 6. Load custom tools and install runner
   const userTools = loadUserTools();
   if (userTools.length > 0) {
-    console.log(`[specter] Custom tools loaded: ${userTools.map(t => t.name).join(', ')}`);
+    console.log(`[shade] Custom tools loaded: ${userTools.map(t => t.name).join(', ')}`);
   }
   // Copy tool runner to tools directory so agent can invoke it via Bash
   const toolsDir = config.tools.userDir;
@@ -72,13 +72,13 @@ async function main() {
   // 7. Start heartbeat
   if (config.heartbeat.enabled) {
     heartbeat.start();
-    console.log(`[specter] Heartbeat enabled (every ${config.heartbeat.intervalMinutes}m)`);
+    console.log(`[shade] Heartbeat enabled (every ${config.heartbeat.intervalMinutes}m)`);
   }
 
   // 8. Hot-reload: apply config changes to running components
   eventBus.on('config:updated', ({ fields, oldName, newName }) => {
     const cfg = getConfig();
-    console.log(`[specter] Config updated: ${fields.join(', ')}`);
+    console.log(`[shade] Config updated: ${fields.join(', ')}`);
 
     // Auto-sync agent name in SOUL.md when config name changes
     if (oldName && newName && oldName !== newName) {
@@ -86,7 +86,7 @@ async function main() {
       const updated = soul.replaceAll(`You are ${oldName}`, `You are ${newName}`);
       if (updated !== soul) {
         writeMemory('SOUL', updated);
-        console.log(`[specter] SOUL.md updated: "${oldName}" → "${newName}"`);
+        console.log(`[shade] SOUL.md updated: "${oldName}" → "${newName}"`);
       }
     }
 
@@ -94,7 +94,7 @@ async function main() {
     if (fields.includes('heartbeat')) {
       heartbeat.updateInterval(cfg.heartbeat.intervalMinutes * 60 * 1000);
       heartbeat.toggle(cfg.heartbeat.enabled);
-      console.log(`[specter] Heartbeat reloaded (enabled=${cfg.heartbeat.enabled}, interval=${cfg.heartbeat.intervalMinutes}m)`);
+      console.log(`[shade] Heartbeat reloaded (enabled=${cfg.heartbeat.enabled}, interval=${cfg.heartbeat.intervalMinutes}m)`);
     }
   });
 
@@ -102,24 +102,24 @@ async function main() {
   eventBus.onAny((event, data) => {
     const d = data as Record<string, unknown>;
     if (event === 'agent:error') {
-      console.error(`[specter] ERROR: ${d['error']}`);
+      console.error(`[shade] ERROR: ${d['error']}`);
     } else if (event === 'agent:response') {
       const cost = d['costUsd'] as number | undefined;
       const costStr = cost ? ` ($${cost.toFixed(4)})` : '';
-      console.log(`[specter] Response${costStr}: ${(d['text'] as string)?.slice(0, 120)}`);
+      console.log(`[shade] Response${costStr}: ${(d['text'] as string)?.slice(0, 120)}`);
     } else if (event === 'session:init') {
-      console.log(`[specter] Session ${d['sessionId']} initialized`);
+      console.log(`[shade] Session ${d['sessionId']} initialized`);
     } else if (event === 'agent:subagent') {
-      console.log(`[specter] Subagent ${d['status']}: ${d['description']}`);
+      console.log(`[shade] Subagent ${d['status']}: ${d['description']}`);
     } else if (event !== 'stats:usage' && event !== 'agent:text_delta' && event !== 'voice:audio' && event !== 'voice:done') {
-      console.log(`[specter] ${event}`);
+      console.log(`[shade] ${event}`);
     }
   });
 
-  console.log(`[specter] Alive at http://${config.server.host}:${config.server.port}`);
+  console.log(`[shade] Alive at http://${config.server.host}:${config.server.port}`);
 
   const shutdown = () => {
-    console.log('\n[specter] Shutting down...');
+    console.log('\n[shade] Shutting down...');
     flushUsage();
     voiceEngine?.stop();
     heartbeat.stop();
@@ -133,6 +133,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('[specter] Fatal:', err);
+  console.error('[shade] Fatal:', err);
   process.exit(1);
 });

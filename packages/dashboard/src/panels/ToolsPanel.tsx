@@ -382,7 +382,7 @@ export function ToolsPanel({ events }: Props) {
         {showBuiltIn && (
           <div className="animate-fade-in">
             <div className="text-[11px] text-c-dim mb-3">
-              Core tools provided by the Claude Agent SDK. Configured in <code className="text-c-cyan bg-c-surface px-1">specter.config.yaml</code> under <code className="text-c-cyan bg-c-surface px-1">tools.allowed</code>.
+              Core tools provided by the Claude Agent SDK. Configured in <code className="text-c-cyan bg-c-surface px-1">shade.config.yaml</code> under <code className="text-c-cyan bg-c-surface px-1">tools.allowed</code>.
             </div>
             <div className="flex flex-wrap gap-1.5 mb-3">
               {registered.map(tool => {

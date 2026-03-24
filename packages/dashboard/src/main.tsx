@@ -30,7 +30,7 @@ function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
     <div className="h-screen w-screen bg-c-bg flex items-center justify-center grain">
       <div className="w-80">
         <div className="text-center mb-8">
-          <div className="text-[24px] font-medium text-c-text tracking-[0.2em] glow-text-strong">SPECTER</div>
+          <div className="text-[24px] font-medium text-c-text tracking-[0.2em] glow-text-strong">SHADE</div>
           <div className="text-[10px] text-c-muted tracking-[0.3em] uppercase mt-1">Remote Access</div>
         </div>
         <div className="space-y-3">
@@ -45,7 +45,7 @@ function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
             autoFocus
           />
           {error && (
-            <div className="text-[11px] text-c-red">Invalid token. Check your specter.config.yaml server.authToken.</div>
+            <div className="text-[11px] text-c-red">Invalid token. Check your shade.config.yaml server.authToken.</div>
           )}
           <button
             onClick={handleSubmit}
@@ -55,7 +55,7 @@ function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
           </button>
         </div>
         <div className="text-[10px] text-c-muted text-center mt-6 leading-relaxed">
-          Find your token in <code className="text-c-cyan bg-c-surface px-1">specter.config.yaml</code> under <code className="text-c-cyan bg-c-surface px-1">server.authToken</code>
+          Find your token in <code className="text-c-cyan bg-c-surface px-1">shade.config.yaml</code> under <code className="text-c-cyan bg-c-surface px-1">server.authToken</code>
           <br />or check the Config panel on your desktop dashboard.
         </div>
       </div>

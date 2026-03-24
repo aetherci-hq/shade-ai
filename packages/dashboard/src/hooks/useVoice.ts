@@ -30,7 +30,7 @@ if (typeof window !== 'undefined') {
 export function useVoice() {
   // Default to muted — user opts in to voice. Persist preference.
   const [muted, setMuted] = useState(() => {
-    const saved = localStorage.getItem('specter_voice_muted');
+    const saved = localStorage.getItem('shade_voice_muted');
     return saved !== null ? saved === 'true' : true; // muted by default
   });
   const [speaking, setSpeaking] = useState(false);
@@ -177,7 +177,7 @@ export function useVoice() {
   const toggleMute = useCallback(() => {
     setMuted(prev => {
       const next = !prev;
-      localStorage.setItem('specter_voice_muted', String(next));
+      localStorage.setItem('shade_voice_muted', String(next));
       if (next) {
         if (audioRef.current) audioRef.current.pause();
         streamActive.current = false;

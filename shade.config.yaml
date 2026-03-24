@@ -1,4 +1,4 @@
-name: Specter
+name: Shade
 timezone: America/New_York
 llm:
   provider: claude

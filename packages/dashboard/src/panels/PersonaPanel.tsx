@@ -638,7 +638,7 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
 
               {subagents.length === 0 ? (
                 <div className="text-c-muted text-[13px]">
-                  No subagents configured. Define them in specter.config.yaml.
+                  No subagents configured. Define them in shade.config.yaml.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

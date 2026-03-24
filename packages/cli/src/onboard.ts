@@ -26,7 +26,7 @@ export async function runOnboarding(baseDir: string) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
   const envPath = resolve(baseDir, '.env');
-  const configPath = resolve(baseDir, 'specter.config.yaml');
+  const configPath = resolve(baseDir, 'shade.config.yaml');
   const soulPath = resolve(baseDir, 'SOUL.md');
   const memoryPath = resolve(baseDir, 'MEMORY.md');
   const heartbeatPath = resolve(baseDir, 'HEARTBEAT.md');
@@ -49,7 +49,7 @@ export async function runOnboarding(baseDir: string) {
   console.log(dim('  This is how your agent identifies itself.'));
   console.log('');
 
-  const name = (await rl.question(green('  > ') + 'Name ' + dim('(Specter) ') + green('> '))).trim() || 'Specter';
+  const name = (await rl.question(green('  > ') + 'Name ' + dim('(Shade) ') + green('> '))).trim() || 'Shade';
 
   console.log('');
   console.log(dim('  Agent name: ') + cyan(name));
@@ -197,7 +197,7 @@ Output ONLY the markdown content for SOUL.md. No preamble, no explanation.`;
   writeFileSync(envPath, `ANTHROPIC_API_KEY=${apiKey}\n`, 'utf-8');
   console.log(dim('  ✓ ') + cyan('.env'));
 
-  // specter.config.yaml (only if it doesn't exist)
+  // shade.config.yaml (only if it doesn't exist)
   if (!existsSync(configPath)) {
     writeFileSync(configPath, `llm:
   provider: claude
@@ -259,9 +259,9 @@ guardrails:
     - "*"
   maxFileSize: 1048576
 `, 'utf-8');
-    console.log(dim('  ✓ ') + cyan('specter.config.yaml'));
+    console.log(dim('  ✓ ') + cyan('shade.config.yaml'));
   } else {
-    console.log(dim('  ⊘ specter.config.yaml (already exists, kept)'));
+    console.log(dim('  ⊘ shade.config.yaml (already exists, kept)'));
   }
 
   // SOUL.md

@@ -23,7 +23,7 @@ function loadDotenv(baseDir: string): void {
 }
 
 const DEFAULTS: SpecterConfig = {
-  name: 'Specter',
+  name: 'Shade',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   llm: { provider: 'claude', model: 'claude-sonnet-4-20250514', maxTokens: 4096 },
   models: {
@@ -158,7 +158,7 @@ export function loadConfig(baseDir: string): SpecterConfig {
   _baseDir = baseDir;
   loadDotenv(baseDir);
 
-  const configPath = resolve(baseDir, 'specter.config.yaml');
+  const configPath = resolve(baseDir, 'shade.config.yaml');
   let userConfig: Record<string, unknown> = {};
 
   if (existsSync(configPath)) {
@@ -205,7 +205,7 @@ export function updateConfig(partial: Record<string, unknown>): SpecterConfig {
   _config = updated;
 
   // Write back to YAML (use a clean copy without resolved absolute paths)
-  const configPath = resolve(_baseDir, 'specter.config.yaml');
+  const configPath = resolve(_baseDir, 'shade.config.yaml');
   const writeable = JSON.parse(JSON.stringify(updated)) as Record<string, unknown>;
 
   // Convert absolute paths back to relative for persistence

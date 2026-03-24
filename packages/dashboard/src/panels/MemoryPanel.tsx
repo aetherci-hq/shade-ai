@@ -204,7 +204,7 @@ function RecallTab() {
         )}
         {!loading && results.length === 0 && (
           <div className="text-c-muted text-[10px] text-center py-8">
-            {hasSearched ? 'No memories match that query.' : 'No memories yet. Start chatting — Specter remembers.'}
+            {hasSearched ? 'No memories match that query.' : 'No memories yet. Start chatting — Shade remembers.'}
           </div>
         )}
         {!loading && results.map(entry => (
@@ -378,7 +378,7 @@ function AddMemoryForm({ onClose }: { onClose: () => void }) {
       <textarea
         value={content}
         onChange={e => setContent(e.target.value)}
-        placeholder="What should Specter remember?"
+        placeholder="What should Shade remember?"
         className="w-full bg-c-bg border border-c-border p-2 text-[11px] text-c-text outline-none focus:border-c-accent/25 resize-none h-20"
         style={{ caretColor: 'var(--color-c-accent)' }}
         autoFocus

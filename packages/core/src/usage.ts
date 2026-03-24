@@ -39,7 +39,7 @@ interface UsageFile {
   daily: DailyUsage[];
 }
 
-const SPECTER_DIR = resolve(homedir(), '.specter');
+const SPECTER_DIR = resolve(homedir(), '.shade');
 const USAGE_PATH = resolve(SPECTER_DIR, 'usage.json');
 const MAX_DAILY_ENTRIES = 90; // Keep 90 days of history
 
