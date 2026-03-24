@@ -12,8 +12,8 @@ function baseUrl(opts: { port?: string }): string {
 }
 
 const program = new Command()
-  .name('specter-ai')
-  .description('Specter — Lightweight Autonomous AI Agent')
+  .name('shade-ai')
+  .description('Shade — Lightweight Autonomous AI Agent')
   .version('0.1.0');
 
 // specter init

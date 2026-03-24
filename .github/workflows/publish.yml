@@ -22,7 +22,7 @@ jobs:
       - run: npm run build
 
       # Publish only the CLI package (it bundles all deps via npm workspace resolution)
-      - name: Publish specter-ai
+      - name: Publish shade-ai
         run: npm publish --workspace=packages/cli --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
