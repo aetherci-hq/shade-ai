@@ -2,6 +2,22 @@
 
 Lightweight autonomous AI agent that runs on your local machine. Dashboard, heartbeat daemon, persistent memory, voice output, custom tools, and remote access — all self-hosted.
 
+---
+
+## Why Shade?
+
+There are other open-source AI agents. Here's why we built this one.
+
+**Built on Claude, not around it.** Shade uses Anthropic's official [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk) — the same runtime that powers Claude Code. Tool execution, streaming, subagents, and continuations are handled by the SDK, not reimplemented from scratch. When the SDK improves, Shade improves. No custom agent loop to maintain, no abstraction layer to debug.
+
+**Focused, not everything.** Other agents support 22+ messaging channels and 200-file plugin systems. Shade supports one thing well: a personal AI agent with a dashboard, a heartbeat, and custom tools. No Telegram, Discord, WhatsApp, Signal, Slack, Matrix, IRC, and iMessage all at once. When you need a channel, add it deliberately. Complexity is a choice, not a default.
+
+**Your costs, visible.** Shade shows you exactly what you're spending. Budget forecasting, per-model cost tiers (haiku for heartbeat checks, sonnet for chat, opus when you need it), daily cost charts, and per-conversation tracking. The heartbeat daemon defaults to the cheapest model because checking "anything to do?" shouldn't cost $0.15 every 30 minutes.
+
+**Guardrails included.** Blocked commands (`rm -rf /`, `format`, `shutdown`), blocked filesystem paths, per-query budget caps, configurable permission modes, voice cost caps, and auth tokens for remote access. The agent is powerful — the guardrails make sure it stays within bounds you set.
+
+---
+
 ## Quick Start
 
 ```bash
