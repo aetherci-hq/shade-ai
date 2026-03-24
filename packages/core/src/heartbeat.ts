@@ -74,11 +74,12 @@ export class HeartbeatDaemon {
     eventBus.emit('heartbeat:wake', { timestamp: Date.now() });
     appendActivity({ type: 'heartbeat:wake' });
 
+    const cfg = getConfig();
     const orders = readMemory('HEARTBEAT');
     const memory = readMemory('MEMORY');
 
     const prompt = [
-      `Current time: ${new Date().toISOString()}`,
+      `Current time: ${new Date().toLocaleString('en-US', { timeZone: cfg.timezone, dateStyle: 'full', timeStyle: 'short' })} (${cfg.timezone})`,
       '',
       '## Standing Orders',
       orders,
@@ -91,7 +92,9 @@ export class HeartbeatDaemon {
     ].join('\n');
 
     try {
-      const result = await this.agent.run(prompt, `heartbeat-${Date.now()}`);
+      const result = await this.agent.run(prompt, `heartbeat-${Date.now()}`, {
+        model: cfg.models?.heartbeat ?? cfg.heartbeat.model ?? 'haiku',
+      });
       const decision = result.trim().startsWith('IDLE') ? 'idle' : 'acted';
 
       this._lastState = {
@@ -105,9 +108,8 @@ export class HeartbeatDaemon {
       appendActivity({ type: 'heartbeat:decision', decision, summary: result.slice(0, 200) });
 
       // Persist state
-      const config = getConfig();
-      const statePath = resolve(config.memory.stateDir, 'heartbeat.json');
-      mkdirSync(resolve(config.memory.stateDir), { recursive: true });
+      const statePath = resolve(cfg.memory.stateDir, 'heartbeat.json');
+      mkdirSync(resolve(cfg.memory.stateDir), { recursive: true });
       writeFileSync(statePath, JSON.stringify(this._lastState, null, 2), 'utf-8');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

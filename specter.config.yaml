@@ -1,10 +1,15 @@
-name: Borland
+name: Specter
+timezone: America/New_York
 llm:
   provider: claude
   model: claude-sonnet-4-20250514
   maxTokens: 4096
+models:
+  default: claude-sonnet-4-20250514
+  advanced: claude-opus-4-20250514
+  heartbeat: haiku
 agent:
-  maxTurns: 75
+  maxTurns: 100
   permissionMode: bypassPermissions
   subagents:
     researcher:
@@ -31,6 +36,11 @@ agent:
 heartbeat:
   enabled: true
   intervalMinutes: 30
+  model: haiku
+server:
+  port: 3700
+  host: 0.0.0.0
+  authToken: d87ae55168104f1cbbd687bf
 memory:
   dir: .
   stateDir: state
@@ -52,9 +62,9 @@ tools:
   disallowed: []
   userDir: tools
 voice:
-  enabled: false
+  enabled: true
   provider: elevenlabs
-  apiKey: ""
+  apiKey: ${ELEVENLABS_API_KEY}
   voiceId: OYRGNLISJdGGRcZArrNH
   model: eleven_turbo_v2_5
   triggers:

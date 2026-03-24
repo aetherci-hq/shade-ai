@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { homedir } from 'os';
 import { eventBus } from './events.js';
+import { getConfig } from './config.js';
 
 export interface DailyUsage {
   date: string; // YYYY-MM-DD
@@ -43,7 +44,19 @@ const USAGE_PATH = resolve(SPECTER_DIR, 'usage.json');
 const MAX_DAILY_ENTRIES = 90; // Keep 90 days of history
 
 function today(): string {
-  return new Date().toISOString().split('T')[0];
+  try {
+    const tz = getConfig().timezone;
+    // Format as YYYY-MM-DD in the configured timezone
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const y = parts.find(p => p.type === 'year')!.value;
+    const m = parts.find(p => p.type === 'month')!.value;
+    const d = parts.find(p => p.type === 'day')!.value;
+    return `${y}-${m}-${d}`;
+  } catch {
+    // Fallback to local time if config not loaded yet
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
 }
 
 function loadFromDisk(): UsageFile {
