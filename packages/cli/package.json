@@ -1,6 +1,6 @@
 {
   "name": "shade-ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shade — Lightweight Autonomous AI Agent. Persistent memory, heartbeat daemon, voice output, custom tools, and a dashboard.",
   "type": "module",
   "bin": {
