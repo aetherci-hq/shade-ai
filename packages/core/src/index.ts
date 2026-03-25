@@ -2,6 +2,7 @@ export { Agent, setMemoryStore } from './agent.js';
 export { HeartbeatDaemon } from './heartbeat.js';
 export { eventBus } from './events.js';
 export { loadConfig, getConfig, updateConfig } from './config.js';
+export { getShadeHome, getHumanPath, resolveAgentDir, listAgents, isDevMode, MultipleAgentsError } from './paths.js';
 export { readMemory, writeMemory, appendMemory, readActivity, appendActivity, appendTranscript, readTranscript, listConversations } from './memory.js';
 export type { ConversationInfo } from './memory.js';
 export { initUsageTracker, getUsageSummary, flushUsage } from './usage.js';

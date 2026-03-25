@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, rea
 import { resolve, dirname, basename } from 'path';
 import { getConfig } from './config.js';
 import { eventBus } from './events.js';
+import { getHumanPath, isDevMode } from './paths.js';
 
 type MemoryFile = 'MEMORY' | 'HEARTBEAT' | 'SOUL' | 'HUMAN';
 
@@ -13,6 +14,10 @@ const DEFAULTS: Record<MemoryFile, string> = {
 };
 
 function filePath(file: MemoryFile): string {
+  // HUMAN.md is global (~/.shade/HUMAN.md) in production, local in dev mode
+  if (file === 'HUMAN' && !isDevMode()) {
+    return getHumanPath();
+  }
   const config = getConfig();
   return resolve(config.memory.dir, `${file}.md`);
 }
@@ -22,6 +27,7 @@ export function readMemory(file: MemoryFile): string {
   if (!existsSync(path)) {
     // Auto-create from defaults so the file exists for the user to customize
     const content = DEFAULTS[file];
+    mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, content, 'utf-8');
     return content;
   }

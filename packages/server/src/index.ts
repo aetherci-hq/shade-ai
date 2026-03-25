@@ -2,13 +2,15 @@ import { resolve } from 'path';
 import { copyFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, initKeys, eventBus, readMemory, writeMemory, loadUserTools } from '@shade/core';
+import { loadConfig, getConfig, Agent, HeartbeatDaemon, setMemoryStore, initUsageTracker, flushUsage, initKeys, eventBus, readMemory, writeMemory, loadUserTools, resolveAgentDir } from '@shade/core';
 import { initMemory } from '@shade/memory';
 import { createServer } from './http.js';
 import { startTranscriptCapture } from './transcripts.js';
 import { initVoice } from '@shade/voice';
 
-const BASE_DIR = resolve(process.cwd());
+// Resolve agent directory: dev mode (cwd) or ~/.shade/agents/<name>/
+const agentName = process.env.SHADE_AGENT;
+const BASE_DIR = resolve(agentName ? resolveAgentDir(agentName) : resolveAgentDir());
 
 async function main() {
   // 1. Load config

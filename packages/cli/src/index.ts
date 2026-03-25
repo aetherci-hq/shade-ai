@@ -1,10 +1,58 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { resolve } from 'path';
+import { existsSync, readdirSync } from 'fs';
+import { homedir } from 'os';
 import { runOnboarding } from './onboard.js';
 
 const DEFAULT_PORT = 3700;
 const DEFAULT_HOST = '127.0.0.1';
+
+function getShadeHome(): string {
+  return resolve(homedir(), '.shade');
+}
+
+/** Find agent dir: dev mode (cwd), single agent, or error */
+function findAgentDir(agentName?: string): string {
+  // Dev mode: config in cwd
+  if (existsSync(resolve(process.cwd(), 'shade.config.yaml'))) {
+    return process.cwd();
+  }
+
+  const agentsDir = resolve(getShadeHome(), 'agents');
+  if (!existsSync(agentsDir)) {
+    console.error('No agents found. Run `npx shade-ai init` first.');
+    process.exit(1);
+  }
+
+  if (agentName) {
+    const dir = resolve(agentsDir, agentName);
+    if (!existsSync(resolve(dir, 'shade.config.yaml'))) {
+      console.error(`Agent "${agentName}" not found.`);
+      process.exit(1);
+    }
+    return dir;
+  }
+
+  const agents = readdirSync(agentsDir, { withFileTypes: true })
+    .filter(d => d.isDirectory() && existsSync(resolve(agentsDir, d.name, 'shade.config.yaml')))
+    .map(d => d.name);
+
+  if (agents.length === 0) {
+    console.error('No agents found. Run `npx shade-ai init` first.');
+    process.exit(1);
+  }
+
+  if (agents.length === 1) {
+    return resolve(agentsDir, agents[0]);
+  }
+
+  // Multiple agents — for now, just list and ask to specify
+  console.error('Multiple agents found:');
+  for (const a of agents) console.error(`  - ${a}`);
+  console.error('Use --agent <name> to specify which one.');
+  process.exit(1);
+}
 
 function baseUrl(opts: { port?: string }): string {
   const port = opts.port ?? String(DEFAULT_PORT);
@@ -20,10 +68,8 @@ const program = new Command()
 program
   .command('init')
   .description('Set up a new agent (name, API key, persona)')
-  .option('-d, --dir <dir>', 'Agent directory', '.')
-  .action(async (opts) => {
-    const dir = resolve(opts.dir);
-    await runOnboarding(dir);
+  .action(async () => {
+    await runOnboarding(getShadeHome());
   });
 
 // shade start
@@ -31,8 +77,11 @@ program
   .command('start')
   .description('Start the Shade server + agent + heartbeat')
   .option('-p, --port <port>', 'Port number', String(DEFAULT_PORT))
+  .option('-a, --agent <name>', 'Agent name')
   .option('--no-heartbeat', 'Disable heartbeat daemon')
   .action(async (opts) => {
+    const agentDir = findAgentDir(opts.agent);
+    process.chdir(agentDir);
     process.env.SHADE_PORT = opts.port;
     if (!opts.heartbeat) process.env.SHADE_NO_HEARTBEAT = '1';
     await import('@shade/server');

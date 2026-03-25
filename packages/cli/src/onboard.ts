@@ -1,6 +1,7 @@
 import { createInterface } from 'readline/promises';
 import { existsSync, writeFileSync, readFileSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
+import { homedir } from 'os';
 import Anthropic from '@anthropic-ai/sdk';
 
 // ─── Terminal styling (no chalk dependency for colors — use ANSI) ───
@@ -20,48 +21,101 @@ function dim(s: string) { return `${DIM}${s}${RESET}`; }
 function red(s: string) { return `${RED}${s}${RESET}`; }
 function bold(s: string) { return `${BOLD}${s}${RESET}`; }
 
+// ─── Paths ──────────────────────────────────────────────────────────
+
+function getShadeHome(): string {
+  return resolve(homedir(), '.shade');
+}
+
 // ─── Main ───────────────────────────────────────────────────────────
 
-export async function runOnboarding(baseDir: string) {
+export async function runOnboarding(_baseDir: string) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
-  const envPath = resolve(baseDir, '.env');
-  const configPath = resolve(baseDir, 'shade.config.yaml');
-  const soulPath = resolve(baseDir, 'SOUL.md');
-  const memoryPath = resolve(baseDir, 'MEMORY.md');
-  const heartbeatPath = resolve(baseDir, 'HEARTBEAT.md');
-  const stateDir = resolve(baseDir, 'state');
-  const toolsDir = resolve(baseDir, 'tools');
+  const shadeHome = getShadeHome();
+  const humanPath = resolve(shadeHome, 'HUMAN.md');
 
   // ─── Banner ─────────────────────────────────────────────────────
 
   console.log('');
   console.log(green('  ╔══════════════════════════════════════════╗'));
-  console.log(green('  ║') + bold('   ⚡ SPECTER — Agent Onboarding          ') + green('║'));
+  console.log(green('  ║') + bold('   ⚡ SHADE — Agent Onboarding            ') + green('║'));
   console.log(green('  ╚══════════════════════════════════════════╝'));
   console.log('');
-  console.log(dim('  Configure your autonomous AI agent in 3 steps.'));
+  console.log(dim('  Configure your autonomous AI agent.'));
   console.log('');
 
   // ─── Step 1: Agent Name ─────────────────────────────────────────
 
-  console.log(green('  [1/3]') + bold(' Agent Name'));
+  console.log(green('  [1/4]') + bold(' Agent Name'));
   console.log(dim('  This is how your agent identifies itself.'));
   console.log('');
 
   const name = (await rl.question(green('  > ') + 'Name ' + dim('(Shade) ') + green('> '))).trim() || 'Shade';
 
+  // Validate agent doesn't already exist
+  const agentDir = resolve(shadeHome, 'agents', name.toLowerCase().replace(/\s+/g, '-'));
+  if (existsSync(resolve(agentDir, 'shade.config.yaml'))) {
+    console.log('');
+    console.log(amber(`  Agent "${name}" already exists at ${agentDir}`));
+    const overwrite = (await rl.question(green('  > ') + 'Reinitialize? ' + dim('(y/N) ') + green('> '))).trim().toLowerCase();
+    if (overwrite !== 'y' && overwrite !== 'yes') {
+      console.log(dim('  Cancelled.'));
+      rl.close();
+      return;
+    }
+  }
+
   console.log('');
   console.log(dim('  Agent name: ') + cyan(name));
+  console.log(dim('  Location:   ') + cyan(agentDir));
   console.log('');
 
-  // ─── Step 2: API Key ────────────────────────────────────────────
+  // ─── Step 2: About You (HUMAN.md — global) ───────────────────
 
-  console.log(green('  [2/3]') + bold(' Claude API Key'));
+  console.log(green('  [2/4]') + bold(' About You'));
+
+  if (existsSync(humanPath)) {
+    console.log(dim('  Found existing profile at ') + cyan('~/.shade/HUMAN.md'));
+    const update = (await rl.question(green('  > ') + 'Update profile? ' + dim('(y/N) ') + green('> '))).trim().toLowerCase();
+    if (update !== 'y' && update !== 'yes') {
+      console.log(dim('  Keeping existing profile.'));
+      console.log('');
+    } else {
+      console.log(dim('  Describe yourself — role, expertise, preferences.'));
+      console.log(dim('  This is shared across all agents. Press Enter to skip.'));
+      console.log('');
+      const humanInput = (await rl.question(green('  > ') + 'About you ' + green('> '))).trim();
+      if (humanInput) {
+        mkdirSync(shadeHome, { recursive: true });
+        writeFileSync(humanPath, `# About Me\n\n${humanInput}\n`, 'utf-8');
+        console.log(dim('  ✓ Updated ') + cyan('~/.shade/HUMAN.md'));
+      }
+      console.log('');
+    }
+  } else {
+    console.log(dim('  Describe yourself — role, expertise, preferences.'));
+    console.log(dim('  This is shared across all agents. Press Enter to skip.'));
+    console.log('');
+    const humanInput = (await rl.question(green('  > ') + 'About you ' + green('> '))).trim();
+    if (humanInput) {
+      mkdirSync(shadeHome, { recursive: true });
+      writeFileSync(humanPath, `# About Me\n\n${humanInput}\n`, 'utf-8');
+      console.log(dim('  ✓ Created ') + cyan('~/.shade/HUMAN.md'));
+    } else {
+      console.log(dim('  Skipped — you can edit ~/.shade/HUMAN.md later.'));
+    }
+    console.log('');
+  }
+
+  // ─── Step 3: API Key ────────────────────────────────────────────
+
+  console.log(green('  [3/4]') + bold(' Claude API Key'));
   console.log(dim('  Get one at https://console.anthropic.com/settings/keys'));
   console.log('');
 
-  // Check if .env already has a key
+  // Check if agent dir already has a key
+  const envPath = resolve(agentDir, '.env');
   let existingKey = '';
   if (existsSync(envPath)) {
     const envContent = readFileSync(envPath, 'utf-8');
@@ -118,9 +172,9 @@ export async function runOnboarding(baseDir: string) {
   }
   console.log('');
 
-  // ─── Step 3: Persona ────────────────────────────────────────────
+  // ─── Step 4: Persona ──────────────────────────────────────────
 
-  console.log(green('  [3/3]') + bold(' Persona'));
+  console.log(green('  [4/4]') + bold(' Persona'));
   console.log(dim('  Describe your agent\'s personality in a sentence or two.'));
   console.log(dim('  Examples:'));
   console.log(dim('    "A snarky DevOps engineer who automates everything"'));
@@ -190,6 +244,9 @@ Output ONLY the markdown content for SOUL.md. No preamble, no explanation.`;
   console.log('');
 
   // Ensure directories exist
+  const stateDir = resolve(agentDir, 'state');
+  const toolsDir = resolve(agentDir, 'tools');
+  mkdirSync(agentDir, { recursive: true });
   mkdirSync(stateDir, { recursive: true });
   mkdirSync(toolsDir, { recursive: true });
 
@@ -197,9 +254,12 @@ Output ONLY the markdown content for SOUL.md. No preamble, no explanation.`;
   writeFileSync(envPath, `ANTHROPIC_API_KEY=${apiKey}\n`, 'utf-8');
   console.log(dim('  ✓ ') + cyan('.env'));
 
-  // shade.config.yaml (only if it doesn't exist)
+  // shade.config.yaml
+  const configPath = resolve(agentDir, 'shade.config.yaml');
   if (!existsSync(configPath)) {
-    writeFileSync(configPath, `llm:
+    writeFileSync(configPath, `name: ${name}
+
+llm:
   provider: claude
   model: claude-sonnet-4-20250514
   maxTokens: 4096
@@ -265,10 +325,12 @@ guardrails:
   }
 
   // SOUL.md
+  const soulPath = resolve(agentDir, 'SOUL.md');
   writeFileSync(soulPath, soulContent.trim() + '\n', 'utf-8');
   console.log(dim('  ✓ ') + cyan('SOUL.md') + dim(` (${soulContent.length} chars)`));
 
   // MEMORY.md (only if doesn't exist)
+  const memoryPath = resolve(agentDir, 'MEMORY.md');
   if (!existsSync(memoryPath)) {
     writeFileSync(memoryPath, `# ${name} Memory\n\n_No memories yet._\n`, 'utf-8');
     console.log(dim('  ✓ ') + cyan('MEMORY.md'));
@@ -277,6 +339,7 @@ guardrails:
   }
 
   // HEARTBEAT.md (only if doesn't exist)
+  const heartbeatPath = resolve(agentDir, 'HEARTBEAT.md');
   if (!existsSync(heartbeatPath)) {
     writeFileSync(heartbeatPath, `# Standing Orders\n\n_No standing orders yet. Add tasks here for ${name} to execute on heartbeat._\n`, 'utf-8');
     console.log(dim('  ✓ ') + cyan('HEARTBEAT.md'));
@@ -291,8 +354,10 @@ guardrails:
   console.log(green('  ║') + bold(`   ⚡ ${name} is ready.`) + ' '.repeat(Math.max(0, 27 - name.length)) + green('║'));
   console.log(green('  ╚══════════════════════════════════════════╝'));
   console.log('');
+  console.log(dim('  Agent location: ') + cyan(agentDir));
+  console.log('');
   console.log(dim('  Start your agent:'));
-  console.log(cyan('    npx specter start'));
+  console.log(cyan('    npx shade-ai start'));
   console.log('');
   console.log(dim('  Dashboard:'));
   console.log(cyan('    http://localhost:3700'));
