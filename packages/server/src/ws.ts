@@ -1,10 +1,51 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
-import type { Agent, HeartbeatDaemon } from '@shade/core';
-import { eventBus, readMemory, writeMemory } from '@shade/core';
+import type { Agent, HeartbeatDaemon, ClientMeta } from '@shade/core';
+import { eventBus, readMemory, writeMemory, getConfig } from '@shade/core';
 import { recordUserMessage } from './transcripts.js';
+import crypto from 'crypto';
 
-const clients = new Set<WebSocket>();
+const clients = new Map<WebSocket, ClientMeta>();
+
+const LOCAL_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+function isLocal(ip: string): boolean {
+  return LOCAL_IPS.has(ip);
+}
+
+/** Get all remote (non-localhost) connected clients */
+export function getRemoteClients(): ClientMeta[] {
+  const remote: ClientMeta[] = [];
+  for (const meta of clients.values()) {
+    if (!isLocal(meta.ip)) {
+      remote.push(meta);
+    }
+  }
+  return remote;
+}
+
+/** Disconnect a single remote client by id */
+export function disconnectClient(id: string): boolean {
+  for (const [ws, meta] of clients.entries()) {
+    if (meta.id === id) {
+      ws.close(1000, 'Disconnected by admin');
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Disconnect all remote clients */
+export function disconnectAllRemote(): number {
+  let count = 0;
+  for (const [ws, meta] of clients.entries()) {
+    if (!isLocal(meta.ip)) {
+      ws.close(1000, 'Kill switch activated');
+      count++;
+    }
+  }
+  return count;
+}
 
 export function setupWebSocket(app: FastifyInstance, agent: Agent, heartbeat: HeartbeatDaemon) {
   // Broadcast all core events to connected clients
@@ -12,7 +53,7 @@ export function setupWebSocket(app: FastifyInstance, agent: Agent, heartbeat: He
     // Voice audio chunks sent as binary frames (handled separately)
     if (event === 'voice:audio') {
       const chunk = (data as { chunk: Buffer }).chunk;
-      for (const ws of clients) {
+      for (const ws of clients.keys()) {
         if (ws.readyState === 1) {
           ws.send(chunk, { binary: true });
         }
@@ -21,7 +62,7 @@ export function setupWebSocket(app: FastifyInstance, agent: Agent, heartbeat: He
     }
 
     const message = JSON.stringify({ type: event, ts: Date.now(), data });
-    for (const ws of clients) {
+    for (const ws of clients.keys()) {
       if (ws.readyState === 1) { // OPEN
         ws.send(message);
       }
@@ -29,9 +70,19 @@ export function setupWebSocket(app: FastifyInstance, agent: Agent, heartbeat: He
   });
 
   app.register(async function (fastify) {
-    fastify.get('/ws', { websocket: true }, (socket) => {
+    fastify.get('/ws', { websocket: true }, (socket, req) => {
       const ws = socket as unknown as WebSocket;
-      clients.add(ws);
+      const ip = req.ip;
+      const userAgent = req.headers['user-agent'] ?? '';
+      const id = crypto.randomUUID().slice(0, 8);
+
+      const meta: ClientMeta = { id, ip, connectedAt: Date.now(), userAgent };
+      clients.set(ws, meta);
+
+      // Emit access event for remote connections
+      if (!isLocal(ip)) {
+        eventBus.emit('access:client_connected', { id, ip, connectedAt: meta.connectedAt });
+      }
 
       // Send initial state
       ws.send(JSON.stringify({
@@ -60,7 +111,11 @@ export function setupWebSocket(app: FastifyInstance, agent: Agent, heartbeat: He
       });
 
       ws.on('close', () => {
+        const closedMeta = clients.get(ws);
         clients.delete(ws);
+        if (closedMeta && !isLocal(closedMeta.ip)) {
+          eventBus.emit('access:client_disconnected', { id: closedMeta.id, ip: closedMeta.ip, reason: 'closed' });
+        }
       });
     });
   });
@@ -87,7 +142,7 @@ async function handleClientMessage(
           ts: Date.now(),
           data: { message, conversationId: convId },
         });
-        for (const c of clients) {
+        for (const c of clients.keys()) {
           if (c.readyState === 1) c.send(userMsg);
         }
         // Run async — events will stream to client via broadcast
@@ -121,7 +176,7 @@ async function handleClientMessage(
         data: { file, content },
       });
       // Send to all clients (simplification — in production, track per-client)
-      for (const ws of clients) {
+      for (const ws of clients.keys()) {
         if (ws.readyState === 1) ws.send(response);
       }
       break;

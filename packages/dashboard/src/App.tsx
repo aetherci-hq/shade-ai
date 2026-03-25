@@ -16,6 +16,7 @@ import { PersonaPanel } from './panels/PersonaPanel';
 import { ToolsPanel } from './panels/ToolsPanel';
 import { StatsPanel } from './panels/StatsPanel';
 import { ConfigPanel } from './panels/ConfigPanel';
+import { AccessPanel, type AccessStatus } from './panels/AccessPanel';
 
 const START_TIME = Date.now();
 
@@ -52,6 +53,7 @@ export function App() {
   const [chatLoaded, setChatLoaded] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [accessStatus, setAccessStatus] = useState<AccessStatus | null>(null);
 
   // Track streaming assistant message
   const streamingRef = useRef<{ ts: number; content: string } | null>(null);
@@ -65,6 +67,34 @@ export function App() {
       .then(setAppConfig)
       .catch(() => {});
   }, []);
+
+  // Fetch access status on mount
+  const refreshAccessStatus = useCallback(() => {
+    authFetch('/api/access/status')
+      .then(r => r.json())
+      .then(setAccessStatus)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshAccessStatus();
+  }, [refreshAccessStatus]);
+
+  // Update access status on connection events
+  useEffect(() => {
+    if (events.length === 0) return;
+    const latest = events[0];
+    if (latest.type === 'access:client_connected' || latest.type === 'access:client_disconnected') {
+      refreshAccessStatus();
+    }
+  }, [events, refreshAccessStatus]);
+
+  // Derive access state for nav icon
+  const accessState: 'locked' | 'armed' | 'connected' = !accessStatus?.armed
+    ? 'locked'
+    : accessStatus.clients.length > 0
+      ? 'connected'
+      : 'armed';
 
   // Resume last chat conversation on mount
   useEffect(() => {
@@ -254,6 +284,43 @@ export function App() {
     send('heartbeat:toggle', { enabled });
   }, [send]);
 
+  // Access panel handlers
+  const handleAccessArm = useCallback(() => {
+    authFetch('/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server: { host: '0.0.0.0' } }),
+    }).then(() => refreshAccessStatus()).catch(() => {});
+  }, [refreshAccessStatus]);
+
+  const handleAccessKill = useCallback(() => {
+    authFetch('/api/access/kill', { method: 'POST' })
+      .then(() => refreshAccessStatus())
+      .catch(() => {});
+  }, [refreshAccessStatus]);
+
+  const handleAccessDisconnect = useCallback((id: string) => {
+    authFetch(`/api/access/disconnect/${id}`, { method: 'POST' })
+      .then(() => refreshAccessStatus())
+      .catch(() => {});
+  }, [refreshAccessStatus]);
+
+  const handleAccessTokenSet = useCallback((token: string) => {
+    authFetch('/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server: { authToken: token } }),
+    }).then(() => refreshAccessStatus()).catch(() => {});
+  }, [refreshAccessStatus]);
+
+  const handleAccessPortChange = useCallback((port: number) => {
+    authFetch('/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server: { port } }),
+    }).then(() => refreshAccessStatus()).catch(() => {});
+  }, [refreshAccessStatus]);
+
   // Mobile detection
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   useEffect(() => {
@@ -311,6 +378,7 @@ export function App() {
       onFocusModeToggle={setFocusMode}
       voice={voice}
       onVoiceMode={() => setVoiceMode(true)}
+      accessState={accessState}
       focusChatPanel={
         <ChatPanel messages={chatMessages} onSend={handleChatSend} onNewChat={handleNewChat} isRunning={agent.isRunning} agentName={agentName} focusMode={focusMode} onFocusToggle={() => setFocusMode(f => !f)} voice={voice} onVoiceMode={() => setVoiceMode(true)} models={appConfig?.models} />
       }
@@ -352,6 +420,16 @@ export function App() {
       )}
       {view === 'memory' && <MemoryPanel onSave={handleMemorySave} onLoad={handleMemoryLoad} memoryContent={memoryContent} />}
       {view === 'tools' && <ToolsPanel events={events} />}
+      {view === 'access' && (
+        <AccessPanel
+          accessStatus={accessStatus}
+          onArm={handleAccessArm}
+          onKill={handleAccessKill}
+          onDisconnect={handleAccessDisconnect}
+          onTokenSet={handleAccessTokenSet}
+          onPortChange={handleAccessPortChange}
+        />
+      )}
       {view === 'config' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-c-border h-full">
           <ConfigPanel />

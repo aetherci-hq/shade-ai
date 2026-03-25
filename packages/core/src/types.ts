@@ -1,3 +1,10 @@
+export interface ClientMeta {
+  id: string;
+  ip: string;
+  connectedAt: number;
+  userAgent: string;
+}
+
 export interface Usage {
   inputTokens: number;
   outputTokens: number;

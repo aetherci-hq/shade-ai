@@ -18,6 +18,8 @@ export interface SpecterEvents {
   'session:init': { sessionId: string; tools: string[]; model: string };
   'voice:audio': { chunk: Buffer };
   'voice:done': {};
+  'access:client_connected': { id: string; ip: string; connectedAt: number };
+  'access:client_disconnected': { id: string; ip: string; reason: 'closed' | 'kicked' | 'killed' };
 }
 
 type EventName = keyof SpecterEvents;

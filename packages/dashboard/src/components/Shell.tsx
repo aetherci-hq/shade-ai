@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { Home, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, ChevronLeft, HeartPulse, Fingerprint, Volume2, VolumeX, Mic, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Home, MessageSquare, Brain, Wrench, Settings, Zap, ChevronRight, ChevronLeft, HeartPulse, Fingerprint, Volume2, VolumeX, Mic, PanelLeftClose, PanelLeftOpen, Shield } from 'lucide-react';
 import type { AgentState } from '../hooks/useAgent';
 import { authFetch } from '../auth';
 
-export type View = 'home' | 'chat' | 'heartbeat' | 'persona' | 'memory' | 'tools' | 'config';
+export type View = 'home' | 'chat' | 'heartbeat' | 'persona' | 'memory' | 'tools' | 'access' | 'config';
 
 interface ShellProps {
   children: ReactNode;
@@ -22,6 +22,7 @@ interface ShellProps {
   focusChatPanel: ReactNode;
   voice: { muted: boolean; speaking: boolean; toggleMute: () => void };
   onVoiceMode?: () => void;
+  accessState: 'locked' | 'armed' | 'connected';
 }
 
 const NAV_ITEMS: { id: View; label: string; icon: typeof Home }[] = [
@@ -31,6 +32,7 @@ const NAV_ITEMS: { id: View; label: string; icon: typeof Home }[] = [
   { id: 'persona', label: 'Persona', icon: Fingerprint },
   { id: 'memory', label: 'Memory', icon: Brain },
   { id: 'tools', label: 'Tools', icon: Wrench },
+  { id: 'access', label: 'Access', icon: Shield },
   { id: 'config', label: 'Config', icon: Settings },
 ];
 
@@ -56,7 +58,7 @@ function formatUptime(ms: number): string {
   return `${s}s`;
 }
 
-export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime, agentName, modelName, focusMode, onFocusModeToggle, focusChatPanel, voice, onVoiceMode }: ShellProps) {
+export function Shell({ children, view, onViewChange, connected, agent, onHeartbeatTrigger, onHeartbeatToggle, startTime, agentName, modelName, focusMode, onFocusModeToggle, focusChatPanel, voice, onVoiceMode, accessState }: ShellProps) {
   const [clock, setClock] = useState(new Date());
   const [sessionCost, setSessionCost] = useState(0);
   const costFetchRef = useRef(0);
@@ -166,7 +168,15 @@ export function Shell({ children, view, onViewChange, connected, agent, onHeartb
                     : `text-c-dim hover:bg-c-surface/50 hover:text-c-text ${collapsed ? '' : 'border-transparent'}`
                 }`}
               >
-                <Icon size={collapsed ? 16 : 13} className={view === id ? 'text-c-accent' : 'text-c-muted'} />
+                <Icon size={collapsed ? 16 : 13} className={
+                  id === 'access'
+                    ? accessState === 'connected'
+                      ? `text-c-red ${view !== id ? 'access-breathe-dot' : ''}`
+                      : accessState === 'armed'
+                        ? 'text-c-amber'
+                        : view === id ? 'text-c-accent' : 'text-c-muted'
+                    : view === id ? 'text-c-accent' : 'text-c-muted'
+                } />
                 {!collapsed && label}
                 {!collapsed && view === id && <ChevronRight size={10} className="ml-auto text-c-accent" />}
               </button>

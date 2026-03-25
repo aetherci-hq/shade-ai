@@ -9,7 +9,7 @@ import { readdirSync, readFileSync } from 'fs';
 import type { Agent, HeartbeatDaemon, SpecterConfig } from '@shade/core';
 import { readMemory, writeMemory, readActivity, readTranscript, listConversations, eventBus, getConfig, updateConfig, getUsageSummary, getKeyStatuses, setKeys, getUserTools, saveToolConfig, getToolConfigValues, loadUserTools } from '@shade/core';
 import { getMemoryStore } from '@shade/memory';
-import { setupWebSocket } from './ws.js';
+import { setupWebSocket, getRemoteClients, disconnectClient, disconnectAllRemote } from './ws.js';
 
 function formatConfigResponse(cfg: SpecterConfig) {
   return {
@@ -97,6 +97,32 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
     const header = req.headers.authorization;
     const token = header?.replace('Bearer ', '');
     return { required: true, valid: token === authToken };
+  });
+
+  // ─── Remote Access Control ─────────────────────────────────────────
+  app.get('/api/access/status', async () => {
+    const cfg = getConfig();
+    const armed = cfg.server.host === '0.0.0.0';
+    return {
+      armed,
+      host: cfg.server.host,
+      port: cfg.server.port,
+      authToken: !!cfg.server.authToken,
+      clients: getRemoteClients(),
+    };
+  });
+
+  app.post<{ Params: { id: string } }>('/api/access/disconnect/:id', async (req, reply) => {
+    const found = disconnectClient(req.params.id);
+    if (!found) return reply.code(404).send({ error: 'Client not found' });
+    return { ok: true };
+  });
+
+  app.post('/api/access/kill', async () => {
+    const count = disconnectAllRemote();
+    // Lock down: flip host back to localhost and persist
+    updateConfig({ server: { host: '127.0.0.1' } });
+    return { ok: true, disconnected: count };
   });
 
   // Serve dashboard static files — resolve via npm package location

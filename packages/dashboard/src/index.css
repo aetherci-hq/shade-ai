@@ -115,3 +115,65 @@ body {
   background: var(--color-c-panel);
   color: var(--color-c-text);
 }
+
+/* ─── Access Panel ──────────────────────────────────────────────────── */
+
+/* Slide track — recessed vault feel */
+.access-slide-track {
+  background: var(--color-c-bg);
+  border: 1px solid var(--color-c-border);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 0 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Flash amber on slide completion */
+.access-flash-amber {
+  animation: access-flash 0.4s ease-out;
+}
+
+@keyframes access-flash {
+  0% { box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 20px rgba(181, 152, 92, 0.4); }
+  50% { box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 30px rgba(181, 152, 92, 0.6); }
+  100% { box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0px rgba(181, 152, 92, 0); }
+}
+
+/* Snap-back spring on handle */
+.access-snap-back {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Amber glow — armed state */
+.access-glow-amber {
+  box-shadow: 0 0 12px rgba(181, 152, 92, 0.08), inset 0 0 12px rgba(181, 152, 92, 0.02);
+  animation: access-pulse-amber 3s ease-in-out infinite;
+}
+
+@keyframes access-pulse-amber {
+  0%, 100% { box-shadow: 0 0 12px rgba(181, 152, 92, 0.08), inset 0 0 12px rgba(181, 152, 92, 0.02); }
+  50% { box-shadow: 0 0 20px rgba(181, 152, 92, 0.15), inset 0 0 16px rgba(181, 152, 92, 0.03); }
+}
+
+/* Red glow — connected state */
+.access-glow-red {
+  box-shadow: 0 0 12px rgba(166, 94, 94, 0.12), inset 0 0 12px rgba(166, 94, 94, 0.03);
+  animation: access-pulse-red 2.5s ease-in-out infinite;
+}
+
+@keyframes access-pulse-red {
+  0%, 100% { box-shadow: 0 0 12px rgba(166, 94, 94, 0.12), inset 0 0 12px rgba(166, 94, 94, 0.03); }
+  50% { box-shadow: 0 0 24px rgba(166, 94, 94, 0.2), inset 0 0 16px rgba(166, 94, 94, 0.04); }
+}
+
+/* Breathing dot for access indicators */
+.access-breathe-dot {
+  animation: access-breathe 3s ease-in-out infinite;
+}
+
+@keyframes access-breathe {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Kill switch hover glow */
+.access-kill-switch:hover {
+  box-shadow: 0 0 16px rgba(166, 94, 94, 0.2);
+}

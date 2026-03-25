@@ -5,6 +5,13 @@ import { eventBus } from './events.js';
 
 type MemoryFile = 'MEMORY' | 'HEARTBEAT' | 'SOUL' | 'HUMAN';
 
+const DEFAULTS: Record<MemoryFile, string> = {
+  MEMORY: '# Shade Memory\n\n_No memories yet. Your agent will write notes here as it works._\n',
+  HEARTBEAT: '# Standing Orders\n\n_No standing orders yet. Add tasks here for your agent to execute on each heartbeat cycle._\n',
+  HUMAN: '# About Me\n\nTell your agent about yourself here. This helps it tailor responses to your context.\n',
+  SOUL: '# Identity\n\nYou are Shade, a lightweight autonomous AI agent. Run `npx shade-ai init` to generate a personalized system prompt.\n',
+};
+
 function filePath(file: MemoryFile): string {
   const config = getConfig();
   return resolve(config.memory.dir, `${file}.md`);
@@ -12,7 +19,12 @@ function filePath(file: MemoryFile): string {
 
 export function readMemory(file: MemoryFile): string {
   const path = filePath(file);
-  if (!existsSync(path)) return '';
+  if (!existsSync(path)) {
+    // Auto-create from defaults so the file exists for the user to customize
+    const content = DEFAULTS[file];
+    writeFileSync(path, content, 'utf-8');
+    return content;
+  }
   return readFileSync(path, 'utf-8');
 }
 

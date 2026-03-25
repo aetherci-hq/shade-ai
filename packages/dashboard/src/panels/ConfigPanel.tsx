@@ -110,9 +110,7 @@ export function ConfigPanel() {
 
     // Detect if server settings changed (requires restart)
     const serverChanged = config?.server && draft.server &&
-      (config.server.host !== draft.server.host ||
-       config.server.port !== draft.server.port ||
-       (draft.server.authToken && draft.server.authToken !== '••••••••'));
+      config.server.port !== draft.server.port;
 
     try {
       const payload: Record<string, unknown> = {
@@ -463,52 +461,6 @@ export function ConfigPanel() {
             </div>
           </Field>
         </Section>
-
-        {/* Server / Remote Access */}
-        {draft.server && (
-          <Section label="Remote Access">
-            <Field label="Host">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={draft.server.host}
-                  onChange={e => {
-                    const newHost = e.target.value;
-                    updateDraft(d => {
-                      const srv = { ...d.server!, host: newHost };
-                      // Auto-generate token when switching to network mode without one
-                      if (newHost === '0.0.0.0' && (!srv.authToken || srv.authToken === '••••••••')) {
-                        srv.authToken = crypto.randomUUID().replace(/-/g, '').slice(0, 24);
-                      }
-                      return { ...d, server: srv };
-                    });
-                  }}
-                  className="cfg-input w-36"
-                  placeholder="127.0.0.1"
-                />
-                <span className="text-c-muted text-[10px]">{draft.server.host === '0.0.0.0' ? 'network' : 'local only'}</span>
-              </div>
-            </Field>
-            <Field label="Port">
-              <input
-                type="number"
-                value={draft.server.port}
-                onChange={e => updateDraft(d => ({ ...d, server: { ...d.server!, port: parseInt(e.target.value) || 3700 } }))}
-                className="cfg-input w-20"
-              />
-            </Field>
-            <Field label="Auth Token">
-              <input
-                type="text"
-                value={draft.server.authToken === '••••••••' ? '' : (draft.server.authToken ?? '')}
-                onChange={e => updateDraft(d => ({ ...d, server: { ...d.server!, authToken: e.target.value || undefined } }))}
-                className="cfg-input w-48"
-                placeholder={draft.server.authToken === '••••••••' ? 'Set (enter new to change)' : 'None (no auth)'}
-              />
-              <div className="text-[9px] text-c-muted mt-1">Required when host is 0.0.0.0. Restart needed.</div>
-            </Field>
-          </Section>
-        )}
 
         {/* Tools */}
         <Section label="Tools">
