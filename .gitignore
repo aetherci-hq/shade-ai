@@ -11,4 +11,4 @@ HEARTBEAT.md
 tools/*
 !tools/system-info.ts
 !tools/weather.ts
-.claude/settings.local.json
+.claude/

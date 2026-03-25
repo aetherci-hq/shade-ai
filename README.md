@@ -1,6 +1,6 @@
 # Shade
 
-Lightweight autonomous AI agent that runs on your local machine. Dashboard, heartbeat daemon, persistent memory, voice output, custom tools, and remote access — all self-hosted.
+Lightweight autonomous AI agent that runs on your local machine. Dashboard, heartbeat daemon, persistent memory, voice output, custom tools, and remote access.
 
 ---
 
@@ -73,10 +73,10 @@ npx tsx packages/server/src/index.ts
 ```
 shade-ai/
 ├── shade.config.yaml      # Agent configuration
-├── SOUL.md                # Agent persona / system prompt
-├── HUMAN.md               # About the user (injected into agent context)
-├── MEMORY.md              # Agent scratchpad notes
-├── HEARTBEAT.md           # Standing orders for heartbeat daemon
+├── SOUL.md                # Agent persona / system prompt (auto-created, gitignored)
+├── HUMAN.md               # About the user (auto-created, gitignored)
+├── MEMORY.md              # Agent scratchpad notes (auto-created, gitignored)
+├── HEARTBEAT.md           # Standing orders for heartbeat daemon (auto-created, gitignored)
 ├── .env                   # API keys (ANTHROPIC_API_KEY, etc.)
 ├── state/                 # Transcripts, usage data, memory DB
 ├── tools/                 # Custom tools (auto-discovered)
@@ -148,13 +148,14 @@ ELEVENLABS_API_KEY=...        # Optional, for voice
 
 The dashboard at `localhost:3700` provides:
 
-- **Activity** — Live event stream
+- **Home** — Command center with status, quick chat, stats, recent activity
 - **Chat** — Terminal-style chat with model toggle, working status, focus mode
 - **Heartbeat** — Daemon controls, standing order templates, cycle history
 - **Persona** — Agent identity builder + Human persona (HUMAN.md)
 - **Memory** — Notes, vector memory recall, stats
 - **Tools** — Custom tools, catalog, execution history
-- **Config** — Live-editable settings, model tiers, remote access, API keys
+- **Access** — Remote access security control center with slide-to-arm, connection monitor, kill switch
+- **Config** — Live-editable settings, model tiers, API keys
 
 ## License
 
