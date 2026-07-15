@@ -19,10 +19,10 @@ packages/memory/
   src/
     index.ts          — Public API (MemoryStore class)
     store.ts          — SQLite storage + vector search
-    embedder.ts       — Local embeddings via @xenova/transformers
+    embedder.ts       — Local embeddings via @huggingface/transformers
     extractor.ts      — Auto-capture from event bus
     types.ts          — MemoryEntry, SearchOpts, etc.
-  package.json        — better-sqlite3, @xenova/transformers
+  package.json        — better-sqlite3, @huggingface/transformers
 ```
 
 ### Data Model
@@ -81,7 +81,7 @@ Vectors are normalized at embedding time, so cosine similarity reduces to dot pr
 
 ## Embedder
 
-`@xenova/transformers` with `Xenova/all-MiniLM-L6-v2` (384 dimensions).
+`@huggingface/transformers` with `Xenova/all-MiniLM-L6-v2` (384 dimensions).
 
 - **Lazy init** — Model loads on first use (~2-3s), not at server startup
 - **Singleton** — One instance, model stays in memory after first load

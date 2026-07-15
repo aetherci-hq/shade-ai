@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is Shade
 
-Shade (npm: `shade-ai`, repo: `aetherci-hq/shade-ai`) is a local autonomous AI agent framework. It wraps the Anthropic Claude Agent SDK with persistent memory, a heartbeat daemon, voice output (ElevenLabs), custom tools, and a React dashboard. All config lives in `shade.config.yaml` with hot-reload support.
+ShadeAI (npm: `shade-ai`, repo: `joe-scalise/shade-ai`) is a local autonomous AI agent framework. It wraps the Anthropic Claude Agent SDK with persistent memory, a heartbeat daemon, voice output (ElevenLabs), custom tools, and a React dashboard. All config lives in `shade.config.yaml` with hot-reload support.
 
 Previously named Specter. Internal workspace package names use `@shade/*` (not published to npm individually). The published npm package is `shade-ai`.
 

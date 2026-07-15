@@ -125,7 +125,7 @@ export function App() {
       .catch(() => { setChatLoaded(true); });
   }, [chatLoaded]);
 
-  const agentName = appConfig?.name ?? 'Specter';
+  const agentName = appConfig?.name ?? 'Shade';
 
   // Build chat messages from events — process new events incrementally
   useEffect(() => {

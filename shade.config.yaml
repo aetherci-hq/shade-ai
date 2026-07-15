@@ -9,8 +9,8 @@ models:
   advanced: claude-opus-4-20250514
   heartbeat: haiku
 agent:
-  maxTurns: 100
-  permissionMode: bypassPermissions
+  maxTurns: 25
+  permissionMode: default
   subagents:
     researcher:
       description: Research agent for web searches, information gathering, and analysis.
@@ -34,13 +34,13 @@ agent:
         - Grep
       model: sonnet
 heartbeat:
-  enabled: true
+  enabled: false
   intervalMinutes: 30
   model: haiku
 server:
   port: 3700
-  host: 0.0.0.0
-  authToken: d87ae55168104f1cbbd687bf
+  host: 127.0.0.1
+  authToken: ${SHADE_AUTH_TOKEN}
 memory:
   dir: .
   stateDir: state
@@ -62,7 +62,7 @@ tools:
   disallowed: []
   userDir: tools
 voice:
-  enabled: true
+  enabled: false
   provider: elevenlabs
   apiKey: ${ELEVENLABS_API_KEY}
   voiceId: OYRGNLISJdGGRcZArrNH
@@ -84,6 +84,5 @@ guardrails:
     - C:\Windows
     - C:\Program Files
   maxShellTimeout: 30000
-  allowedHosts:
-    - "*"
+  allowedHosts: []
   maxFileSize: 1048576

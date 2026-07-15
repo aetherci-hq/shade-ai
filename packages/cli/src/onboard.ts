@@ -266,7 +266,7 @@ llm:
 
 agent:
   maxTurns: 75
-  permissionMode: bypassPermissions
+  permissionMode: default
   subagents:
     researcher:
       description: Research agent for web searches, information gathering, and analysis.
@@ -280,7 +280,7 @@ agent:
       model: sonnet
 
 heartbeat:
-  enabled: true
+  enabled: false
   intervalMinutes: 15
 
 server:
@@ -315,8 +315,7 @@ guardrails:
     - /etc
     - /System
   maxShellTimeout: 30000
-  allowedHosts:
-    - "*"
+  allowedHosts: []
   maxFileSize: 1048576
 `, 'utf-8');
     console.log(dim('  ✓ ') + cyan('shade.config.yaml'));

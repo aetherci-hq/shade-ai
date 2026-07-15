@@ -307,7 +307,7 @@ export function ToolsPanel({ events }: Props) {
       {bundledTools.length + agentBuiltTools.length === 0 ? (
         <div className="text-c-muted text-[12px] mb-5 bg-c-surface border border-c-border p-4">
           No custom tools yet. Drop <code className="text-c-cyan">.ts</code> files in <code className="text-c-cyan">tools/</code> or click New Tool above.
-          <br /><span className="text-[11px]">Specter will also create tools here when you ask it to build a capability.</span>
+          <br /><span className="text-[11px]">ShadeAI will also create tools here when you ask it to build a capability.</span>
         </div>
       ) : (
         <div className="space-y-2 mb-5">

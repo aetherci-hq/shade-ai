@@ -84,7 +84,7 @@ export async function createServer(agent: Agent, heartbeat: HeartbeatDaemon, con
         reply.code(401).send({ error: 'Unauthorized' });
       }
     });
-    console.log(`[specter] Auth enabled — remote access requires token`);
+    console.log(`[shade] Auth enabled — remote access requires token`);
   }
 
   // Auth check endpoint — lets the dashboard verify the token

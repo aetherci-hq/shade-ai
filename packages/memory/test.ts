@@ -38,7 +38,7 @@ async function run() {
   });
 
   await store.store({
-    content: 'Specter runs on port 3700 by default. The heartbeat daemon checks in every 15 minutes.',
+    content: 'ShadeAI runs on port 3700 by default. The heartbeat daemon can check in every 15 minutes.',
     type: 'auto', source: 'conv-3', importance: 0.4,
   });
 
@@ -48,7 +48,7 @@ async function run() {
   });
 
   await store.remember(
-    'User is building an autonomous AI agent platform called Specter. They care deeply about design quality and local-first architecture.',
+    'User is building an autonomous AI agent platform called ShadeAI. They care deeply about design quality and local-first architecture.',
     ['user-context', 'project'],
   );
 

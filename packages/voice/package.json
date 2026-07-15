@@ -1,6 +1,7 @@
 {
   "name": "@shade/voice",
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,7 +21,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aetherci-hq/shade-ai"
+    "url": "https://github.com/joe-scalise/shade-ai.git"
   },
-  "description": "Specter voice package"
+  "description": "ShadeAI voice package"
 }

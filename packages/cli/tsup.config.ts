@@ -21,7 +21,7 @@ export default defineConfig({
     'node:net', 'node:http', 'node:https', 'node:util', 'node:buffer',
     // npm deps (resolved at install time)
     '@anthropic-ai/sdk', '@anthropic-ai/claude-agent-sdk',
-    'better-sqlite3', '@xenova/transformers',
+    'better-sqlite3', '@huggingface/transformers',
     'fastify', '@fastify/cors', '@fastify/static', '@fastify/websocket',
     'yaml', 'zod', 'glob', 'chalk', 'commander', 'ws',
   ],
