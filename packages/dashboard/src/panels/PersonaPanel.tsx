@@ -430,7 +430,7 @@ export function PersonaPanel({ agent, connected, memoryContent, onMemorySave, on
 
   const status = connected ? (agent.isRunning ? 'WORKING' : 'ALIVE') : 'DISCONNECTED';
   const statusColor = connected ? (agent.isRunning ? 'text-c-amber' : 'text-c-green') : 'text-c-red';
-  const agentName = appConfig?.name ?? 'Specter';
+  const agentName = appConfig?.name ?? 'Shade';
   const modelName = appConfig?.llm.model ?? 'claude-sonnet-4';
   const permMode = (appConfig?.agent.permissionMode ?? 'bypass').toUpperCase();
   const uptime = Date.now() - startTime;

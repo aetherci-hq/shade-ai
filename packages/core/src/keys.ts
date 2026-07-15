@@ -7,7 +7,7 @@ export function initKeys(baseDir: string): void {
   _baseDir = baseDir;
 }
 
-/** Known API keys Specter manages */
+/** Known API keys ShadeAI manages */
 const MANAGED_KEYS = [
   'ANTHROPIC_API_KEY',
   'ELEVENLABS_API_KEY',

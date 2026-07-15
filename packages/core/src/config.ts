@@ -33,7 +33,7 @@ const DEFAULTS: SpecterConfig = {
   },
   agent: {
     maxTurns: 25,
-    permissionMode: 'bypassPermissions',
+    permissionMode: 'default',
     subagents: {
       researcher: {
         description: 'Research agent for web searches, information gathering, and analysis.',
@@ -49,7 +49,7 @@ const DEFAULTS: SpecterConfig = {
       },
     },
   },
-  heartbeat: { enabled: true, intervalMinutes: 15, model: 'haiku' },
+  heartbeat: { enabled: false, intervalMinutes: 15, model: 'haiku' },
   server: { port: 3700, host: '127.0.0.1' },
   memory: { dir: '.', stateDir: './state', embedModel: 'Xenova/all-MiniLM-L6-v2', autoCapture: true, maxEntries: 10000, contextLimit: 8 },
   tools: {
@@ -71,7 +71,7 @@ const DEFAULTS: SpecterConfig = {
     blockedCommands: ['rm -rf /', 'format', 'shutdown', 'reboot'],
     blockedPaths: ['/etc', '/System', 'C:\\Windows'],
     maxShellTimeout: 30000,
-    allowedHosts: ['*'],
+    allowedHosts: [],
     maxFileSize: 1048576,
   },
 };

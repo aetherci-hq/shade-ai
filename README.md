@@ -1,12 +1,14 @@
-# Shade
+# ShadeAI
 
-Lightweight autonomous AI agent that runs on your local machine. Dashboard, heartbeat daemon, persistent memory, voice output, custom tools, and remote access.
+An experiment in building a local-first personal AI assistant with a live dashboard, persistent memory, scheduled autonomy, voice output, custom tools, and visible cost controls.
+
+Built by [Joe Scalise](https://scalise.us) to explore the architecture and safety boundaries of OpenClaw-style personal agents.
 
 ---
 
-## Why Shade?
+## Why ShadeAI?
 
-There are other open-source AI agents. Here's why we built this one.
+There are other personal AI agents. Here's what I wanted to explore with this one.
 
 **Built on Claude, not around it.** Shade uses Anthropic's official [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk) — the same runtime that powers Claude Code. Tool execution, streaming, subagents, and continuations are handled by the SDK, not reimplemented from scratch. When the SDK improves, Shade improves. No custom agent loop to maintain, no abstraction layer to debug.
 
@@ -16,7 +18,7 @@ There are other open-source AI agents. Here's why we built this one.
 
 **Dashboard-first, not dashboard-optional.** The agent's internals aren't hidden behind config files you have to hunt for. Persona, memory, standing orders, tools, cost tracking, model selection — it's all in the dashboard, editable live, with changes that persist to YAML and hot-reload without restarting. Full transparency is a design principle, not an afterthought. You should see exactly what your agent knows, what it costs, and what it's doing at all times.
 
-**Guardrails included.** Blocked commands (`rm -rf /`, `format`, `shutdown`), blocked filesystem paths, per-query budget caps, configurable permission modes, voice cost caps, and auth tokens for remote access. The agent is powerful — the guardrails make sure it stays within bounds you set.
+**Safety-conscious defaults.** ShadeAI binds to localhost, starts in the Claude Agent SDK's default permission mode, and leaves scheduled autonomy and voice output disabled until explicitly enabled. It also supports per-query budget caps, configurable permission modes, voice cost caps, and token-protected remote access.
 
 ---
 
@@ -35,7 +37,7 @@ Once running, open **http://localhost:3700** for the dashboard.
 ### CLI Commands
 
 ```bash
-shade-ai start                 # Start server + agent + heartbeat
+shade-ai start                 # Start server + agent
 shade-ai start --no-heartbeat  # Start without heartbeat daemon
 shade-ai chat "hello"          # Send a message to the running agent
 shade-ai status                # Check server health
@@ -47,7 +49,7 @@ shade-ai logs -n 50            # View last 50 log entries
 ## Manual Install (Development)
 
 ```bash
-git clone https://github.com/aetherci-hq/shade-ai.git && cd shade-ai
+git clone https://github.com/joe-scalise/shade-ai.git && cd shade-ai
 cp .env.example .env          # Add your ANTHROPIC_API_KEY
 npm install
 npm run build
@@ -102,7 +104,7 @@ All config lives in `shade.config.yaml`. Most settings can be changed live from 
 | `models.heartbeat` | Model for heartbeat checks (default: haiku) |
 | `agent.maxTurns` | Max turns per query |
 | `agent.maxBudgetUsd` | Per-query cost cap |
-| `agent.permissionMode` | `bypassPermissions`, `acceptEdits`, `default`, `plan` |
+| `agent.permissionMode` | `default`, `acceptEdits`, `plan`, or explicitly enabled `bypassPermissions` |
 | `agent.subagents` | Named sub-agents with their own model, tools, and prompt |
 | `heartbeat.enabled` | Autonomous background task daemon |
 | `heartbeat.intervalMinutes` | How often heartbeat wakes |
@@ -117,13 +119,17 @@ All config lives in `shade.config.yaml`. Most settings can be changed live from 
 
 Access Shade from your phone or another device on your network:
 
+```dotenv
+SHADE_AUTH_TOKEN=generate-a-long-random-value
+```
+
 ```yaml
 server:
   host: 0.0.0.0
-  authToken: your-secret-token
+  authToken: ${SHADE_AUTH_TOKEN}
 ```
 
-Restart, then open `http://<your-ip>:3700` from any device. Mobile gets a full-screen chat interface.
+Keep the token in the ignored `.env` file, restart, then open `http://<your-ip>:3700` from another device. Mobile gets a full-screen chat interface.
 
 ### Custom Tools
 
@@ -142,6 +148,7 @@ Managed via the dashboard Config panel or directly in `.env`:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 ELEVENLABS_API_KEY=...        # Optional, for voice
+SHADE_AUTH_TOKEN=...          # Optional, required for remote access
 ```
 
 ## Dashboard
@@ -159,4 +166,4 @@ The dashboard at `localhost:3700` provides:
 
 ## License
 
-MIT
+[MIT](LICENSE) — Created by [Joe Scalise](https://scalise.us).

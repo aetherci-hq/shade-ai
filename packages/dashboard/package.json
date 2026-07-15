@@ -1,6 +1,7 @@
 {
   "name": "@shade/dashboard",
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "main": "dist/index.html",
   "files": [
@@ -33,7 +34,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aetherci-hq/shade-ai"
+    "url": "https://github.com/joe-scalise/shade-ai.git"
   },
-  "description": "Specter dashboard package"
+  "description": "ShadeAI dashboard package"
 }

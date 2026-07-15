@@ -4,8 +4,8 @@ let instance: Pipeline | null = null;
 let initPromise: Promise<void> | null = null;
 
 async function loadModel(): Promise<void> {
-  // Dynamic import — @xenova/transformers is ESM-only
-  const { pipeline } = await import('@xenova/transformers');
+  // Dynamic import — @huggingface/transformers is ESM-only
+  const { pipeline } = await import('@huggingface/transformers');
   instance = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2') as unknown as Pipeline;
 }
 

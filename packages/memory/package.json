@@ -1,6 +1,7 @@
 {
   "name": "@shade/memory",
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +15,7 @@
   "dependencies": {
     "@shade/core": "^0.1.0",
     "better-sqlite3": "^11.0.0",
-    "@xenova/transformers": "^2.17.0"
+    "@huggingface/transformers": "^4.2.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
@@ -23,7 +24,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aetherci-hq/shade-ai"
+    "url": "https://github.com/joe-scalise/shade-ai.git"
   },
-  "description": "Specter memory package"
+  "description": "ShadeAI memory package"
 }
