@@ -4,6 +4,8 @@ An experiment in building a local-first personal AI assistant with a live dashbo
 
 Built by [Joe Scalise](https://scalise.us) to explore the architecture and safety boundaries of OpenClaw-style personal agents.
 
+![ShadeAI dashboard showing the agent home view, usage controls, and recent activity](docs/images/shade-dashboard.png)
+
 ---
 
 ## Why ShadeAI?
