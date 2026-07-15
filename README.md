@@ -1,8 +1,6 @@
 # ShadeAI
 
-An experiment in building a local-first personal AI assistant with a live dashboard, persistent memory, scheduled autonomy, voice output, custom tools, and visible cost controls.
-
-Built by [Joe Scalise](https://scalise.us) to explore the architecture and safety boundaries of OpenClaw-style personal agents.
+An experiment in building a personal AI assistant vs. just installing the most popular one.  A local-first personal AI assistant with a live dashboard, persistent memory, scheduled autonomy, voice output, custom tools, and visible cost controls.
 
 ![ShadeAI dashboard showing the agent home view, usage controls, and recent activity](docs/images/shade-dashboard.png)
 
